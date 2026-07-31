@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Stethoscope } from "lucide-react";
+import { Search, Stethoscope, ArrowRight } from "lucide-react";
 import { CTA, PageHero } from "../components/Common";
 import { supabase } from "../lib/supabase";
+import { Link } from "react-router-dom";
 
 export default function ServicesPage() {
   const [services, setServices] = useState([]);
@@ -156,6 +157,13 @@ export default function ServicesPage() {
                         {service.description}
                       </p>
                     )}
+                    <Link
+  to={`/services/${service.slug}`}
+  className="mt-6 inline-flex items-center gap-2 font-semibold text-orange transition hover:underline"
+>
+  Pelajari Selengkapnya
+  <ArrowRight size={17} />
+</Link>
                   </article>
                 );
               })}

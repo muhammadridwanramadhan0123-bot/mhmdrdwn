@@ -57,15 +57,24 @@ export const featuredServices = [
 ];
 
 export const portfolios = [
-  { title: "SATUSEHAT Solution", category: "Healthcare", description: "Interoperabilitas data kesehatan untuk ekosistem nasional.", icon: ShieldCheck, tone: "from-cyan-600 to-ink" },
-  { title: "Medifant", category: "Healthcare", description: "Solusi digital untuk mendukung pelayanan fasilitas kesehatan.", icon: HeartPulse, tone: "from-teal to-ink" },
-  { title: "COVID-19 System", category: "Healthcare", description: "Sistem informasi pendukung respons layanan kesehatan.", icon: Activity, tone: "from-orange to-amber-500" },
-  { title: "Vertical Hospital", category: "Healthcare", description: "Transformasi digital untuk rumah sakit vertikal.", icon: Building2, tone: "from-sky-700 to-ink" },
-  { title: "SIM Online", category: "Government", description: "Pengembangan sistem layanan publik yang efisien.", icon: Network, tone: "from-slate-600 to-ink" },
-  { title: "Digital Taekwondo Indonesia", category: "Sports", description: "Digitalisasi administrasi dan ekosistem olahraga.", icon: UsersRound, tone: "from-red-600 to-orange" },
-  { title: "Bunihayu Forest", category: "Tourism", description: "Transformasi layanan wisata dan hospitality.", icon: Wifi, tone: "from-emerald-600 to-teal" },
-  { title: "Sari Medika Resort", category: "Tourism", description: "Sistem terintegrasi untuk wellness dan hospitality.", icon: Building2, tone: "from-amber-600 to-orange" },
-  { title: "Healthcare Research", category: "Research", description: "Riset dan inovasi untuk masa depan layanan kesehatan.", icon: BrainCircuit, tone: "from-violet-600 to-ink" },
+  {
+    title: "Hospital Information System",
+    slug: "hospital-information-system",
+    category: "Healthcare",
+    description:
+      "Development of an integrated hospital information system.",
+    icon: Hospital,
+    tone: "from-blue-500 to-cyan-400",
+  },
+  {
+    title: "Government Digital Platform",
+    slug: "government-digital-platform",
+    category: "Government",
+    description:
+      "Digital platform development for government public services.",
+    icon: Building2,
+    tone: "from-orange-500 to-amber-400",
+  },
 ];
 
 export const insights = [
