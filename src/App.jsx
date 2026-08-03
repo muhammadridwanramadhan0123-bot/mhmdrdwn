@@ -1,27 +1,64 @@
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
 
-// Layout
 import Layout from "./components/Layout";
 import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
 
-// Halaman publik
+/* =========================
+   HALAMAN PUBLIK
+========================= */
 import HomePage from "./pages/HomePage";
 import ServicesPage from "./pages/ServicesPage";
-import PortfolioPage from "./pages/PortfolioPage";
-import CompanyPage from "./pages/CompanyPage";
-import InsightPage from "./pages/InsightPage";
-import ContactPage from "./pages/ContactPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
+import PortfolioPage from "./pages/PortfolioPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
+import InsightPage from "./pages/InsightPage";
+import InsightDetailPage from "./pages/InsightDetailPage";
+import ContactPage from "./pages/ContactPage";
+import CompanyAboutPage from "./pages/company/CompanyAboutPage";
+import CompanyMilestonePage from "./pages/company/CompanyMilestonePage";
+import CompanyPartnersPage from "./pages/company/CompanyPartnersPage";
+import CompanyLocationPage from "./pages/company/CompanyLocationPage";
+import CompanyCareerPage from "./pages/company/CompanyCareerPage";
 
-// Halaman admin
+/* =========================
+   LOGIN DAN DASHBOARD
+========================= */
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+
+/* =========================
+   PORTFOLIO ADMIN
+========================= */
 import AdminPortfolioPage from "./pages/admin/AdminPortfolioPage";
 import AdminPortfolioCreatePage from "./pages/admin/AdminPortfolioCreatePage";
 import AdminPortfolioEditPage from "./pages/admin/AdminPortfolioEditPage";
+
+/* =========================
+   INSIGHT ADMIN
+========================= */
+import AdminInsightPage from "./pages/admin/AdminInsightPage";
+import AdminInsightCreatePage from "./pages/admin/AdminInsightCreatePage";
+import AdminInsightEditPage from "./pages/admin/AdminInsightEditPage";
+
+/* =========================
+   SERVICES ADMIN
+========================= */
+import AdminServicePage from "./pages/admin/AdminServicePage";
+import AdminServiceCreatePage from "./pages/admin/AdminServiceCreatePage";
+import AdminServiceEditPage from "./pages/admin/AdminServiceEditPage";
+
+/* =========================
+   MESSEGE
+========================= */
+import AdminContactMessagePage from "./pages/admin/AdminContactMessagePage";
+import AdminContactMessageDetailPage from "./pages/admin/AdminContactMessageDetailPage";
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -30,7 +67,6 @@ function ScrollTop() {
     window.scrollTo({
       top: 0,
       left: 0,
-      behavior: "instant",
     });
   }, [pathname]);
 
@@ -47,33 +83,85 @@ export default function App() {
             WEBSITE PUBLIK
         ========================== */}
         <Route element={<Layout />}>
-          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/"
+            element={<HomePage />}
+          />
 
-          <Route path="/services" element={<ServicesPage />} />
+          <Route
+            path="/services"
+            element={<ServicesPage />}
+          />
 
           <Route
             path="/services/:slug"
             element={<ServiceDetailPage />}
           />
 
-          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route
+            path="/portfolio"
+            element={<PortfolioPage />}
+          />
 
           <Route
             path="/portfolio/:slug"
             element={<PortfolioDetailPage />}
           />
 
-          <Route path="/company" element={<CompanyPage />} />
+          {/* COMPANY */}
+<Route
+  path="/company"
+  element={
+    <Navigate
+      to="/company/about-us"
+      replace
+    />
+  }
+/>
 
-          <Route path="/insight" element={<InsightPage />} />
+<Route
+  path="/company/about-us"
+  element={<CompanyAboutPage />}
+/>
 
-          <Route path="/contact" element={<ContactPage />} />
+<Route
+  path="/company/milestone"
+  element={<CompanyMilestonePage />}
+/>
+
+<Route
+  path="/company/partners"
+  element={<CompanyPartnersPage />}
+/>
+
+<Route
+  path="/company/location"
+  element={<CompanyLocationPage />}
+/>
+
+<Route
+  path="/company/career"
+  element={<CompanyCareerPage />}
+/>
+
+          <Route
+            path="/insight"
+            element={<InsightPage />}
+          />
+
+          <Route
+            path="/insight/:slug"
+            element={<InsightDetailPage />}
+          />
+
+          <Route
+            path="/contact"
+            element={<ContactPage />}
+          />
         </Route>
 
         {/* =========================
             LOGIN ADMIN
-            Tidak menggunakan AdminLayout
-            dan tidak diproteksi
         ========================== */}
         <Route
           path="/admin/login"
@@ -82,8 +170,6 @@ export default function App() {
 
         {/* =========================
             DASHBOARD ADMIN
-            Seluruh route di dalamnya
-            dilindungi ProtectedAdminRoute
         ========================== */}
         <Route
           path="/admin"
@@ -93,28 +179,66 @@ export default function App() {
             </ProtectedAdminRoute>
           }
         >
-          {/* /admin */}
           <Route
             index
             element={<AdminDashboardPage />}
           />
 
-          {/* /admin/portfolio */}
+          {/* Portfolio */}
           <Route
             path="portfolio"
             element={<AdminPortfolioPage />}
           />
 
-          {/* /admin/portfolio/create */}
           <Route
             path="portfolio/create"
             element={<AdminPortfolioCreatePage />}
           />
 
-          {/* /admin/portfolio/edit/:id */}
           <Route
             path="portfolio/edit/:id"
             element={<AdminPortfolioEditPage />}
+          />
+
+          {/* Insight */}
+          <Route
+            path="insight"
+            element={<AdminInsightPage />}
+          />
+
+          <Route
+            path="insight/create"
+            element={<AdminInsightCreatePage />}
+          />
+
+          <Route
+            path="insight/edit/:id"
+            element={<AdminInsightEditPage />}
+          />
+
+          {/* Services */}
+          <Route
+            path="services"
+            element={<AdminServicePage />}
+          />
+
+          <Route
+            path="services/create"
+            element={<AdminServiceCreatePage />}
+          />
+
+          <Route
+            path="services/edit/:id"
+            element={<AdminServiceEditPage />}
+          />
+          {/* PESAN MASUK */}
+          <Route
+            path="messages"
+            element={<AdminContactMessagePage />}
+          />
+          <Route
+            path="messages/:id"
+            element={<AdminContactMessageDetailPage />}
           />
         </Route>
 

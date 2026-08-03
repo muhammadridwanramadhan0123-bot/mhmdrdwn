@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
   ExternalLink,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
+  Mail,
   Menu,
-  PlusCircle,
+  Newspaper,
+  Stethoscope,
   X,
 } from "lucide-react";
 import {
@@ -30,45 +32,52 @@ const navigationItems = [
     label: "Portfolio",
     to: "/admin/portfolio",
     icon: BriefcaseBusiness,
-    end: true,
+    end: false,
   },
   {
-    label: "Tambah Portfolio",
-    to: "/admin/portfolio/create",
-    icon: PlusCircle,
-    end: true,
+    label: "Insight",
+    to: "/admin/insight",
+    icon: Newspaper,
+    end: false,
+  },
+  {
+    label: "Services",
+    to: "/admin/services",
+    icon: Stethoscope,
+    end: false,
+  },
+  {
+  label: "Pesan Masuk",
+  to: "/admin/messages",
+  icon: Mail,
+  end: false,
   },
 ];
-
-function getNavLinkClass({ isActive }) {
-  const baseClass =
-    "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition duration-200";
-
-  const activeClass =
-    "bg-[#FF5A0A] text-white shadow-lg shadow-orange-950/20";
-
-  const inactiveClass =
-    "text-slate-200 hover:bg-white/10 hover:text-white";
-
-  return `${baseClass} ${
-    isActive ? activeClass : inactiveClass
-  }`;
-}
 
 function getRoleLabel(role) {
   switch (role) {
     case "admin":
       return "Administrator";
-
     case "editor":
       return "Editor";
-
     case "viewer":
       return "Viewer";
-
     default:
       return "Content Manager";
   }
+}
+
+function getNavLinkClass({ isActive }) {
+  const baseClass =
+    "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition-all duration-200";
+
+  const activeClass =
+    "bg-[#FF5A0A] text-white shadow-lg shadow-orange-500/20";
+
+  const inactiveClass =
+    "text-slate-300 hover:bg-white/8 hover:text-white";
+
+  return `${baseClass} ${isActive ? activeClass : inactiveClass}`;
 }
 
 export default function AdminLayout() {
@@ -79,20 +88,8 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  /*
-   * Data user dan role sekarang berasal dari AdminAuthContext.
-   */
-  const {
-    user,
-    profile,
-    role,
-    signOut,
-  } = useAdminAuth();
+  const { user, profile, role, signOut } = useAdminAuth();
 
-  /*
-   * Gunakan nama profile apabila tersedia.
-   * Bila tidak ada, gunakan email user.
-   */
   const displayName =
     profile?.full_name ||
     profile?.name ||
@@ -102,19 +99,14 @@ export default function AdminLayout() {
 
   const roleLabel = getRoleLabel(role);
 
-  const avatarInitial =
-    String(displayName)
-      .trim()
-      .charAt(0)
-      .toUpperCase() || "U";
+  const avatarInitial = useMemo(() => {
+    return String(displayName).trim().charAt(0).toUpperCase() || "U";
+  }, [displayName]);
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  /*
-   * Logout Supabase yang sebenarnya.
-   */
   async function handleLogout() {
     if (isLoggingOut) return;
 
@@ -141,60 +133,56 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 lg:flex">
-      {/* Overlay sidebar mobile */}
+    <div className="min-h-screen bg-[#F4F7FB] lg:flex">
+      {/* Overlay mobile */}
       {sidebarOpen && (
         <button
           type="button"
           aria-label="Tutup sidebar"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/60 lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-[1px] lg:hidden"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#082B3A] text-white shadow-xl transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
-          sidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 flex w-[290px] flex-col border-r border-white/10 bg-[#082B3A] text-white transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Logo */}
-        <div className="flex h-20 items-center justify-between border-b border-white/15 px-6">
-          <Link
-            to="/admin"
-            className="flex min-w-0 items-center gap-3"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FF5A0A] text-lg font-extrabold text-white shadow-lg shadow-orange-950/20">
-              JMT
-            </div>
+        {/* Brand */}
+        <div className="border-b border-white/10 px-6 pb-5 pt-6">
+          <div className="flex items-start justify-between gap-3">
+            <Link to="/admin" className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#FF5A0A] text-lg font-extrabold text-white shadow-lg shadow-orange-950/20">
+                JMT
+              </div>
 
-            <div className="min-w-0">
-              <p className="truncate text-base font-bold text-white">
-                JMT Admin
-              </p>
+              <div className="min-w-0">
+                <p className="truncate text-lg font-bold text-white">
+                  JMT Admin
+                </p>
+                <p className="mt-0.5 truncate text-xs text-slate-300">
+                  Content Management System
+                </p>
+              </div>
+            </Link>
 
-              <p className="mt-0.5 truncate text-xs text-slate-300">
-                Content Management
-              </p>
-            </div>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-2 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden"
-            aria-label="Tutup sidebar"
-          >
-            <X size={21} />
-          </button>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-xl p-2 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden"
+              aria-label="Tutup sidebar"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* Menu navigasi */}
+        {/* Nav */}
         <div className="flex-1 overflow-y-auto px-4 py-6">
-          <p className="mb-3 px-4 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
-            Main Menu
+          <p className="mb-3 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Main Navigation
           </p>
 
           <nav className="space-y-2">
@@ -208,46 +196,38 @@ export default function AdminLayout() {
                   end={item.end}
                   className={getNavLinkClass}
                 >
-                  <Icon
-                    size={19}
-                    strokeWidth={2}
-                    className="shrink-0"
-                  />
+                  {({ isActive }) => (
+                    <>
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                          isActive
+                            ? "bg-white/15 text-white"
+                            : "bg-white/5 text-slate-300 group-hover:bg-white/10 group-hover:text-white"
+                        }`}
+                      >
+                        <Icon size={18} strokeWidth={2.2} />
+                      </div>
 
-                  <span>{item.label}</span>
+                      <span className="truncate">{item.label}</span>
+                    </>
+                  )}
                 </NavLink>
               );
             })}
           </nav>
         </div>
 
-        {/* Informasi akun di sidebar */}
-        <div className="border-t border-white/10 px-4 pt-4">
-          <div className="rounded-xl bg-white/5 px-4 py-3">
-            <p className="truncate text-sm font-semibold text-white">
-              {displayName}
-            </p>
-
-            <p className="mt-1 truncate text-xs capitalize text-slate-300">
-              {roleLabel}
-            </p>
-          </div>
-        </div>
-
-        {/* Menu bawah */}
-        <div className="p-4">
+        {/* Bottom action */}
+        <div className="border-t border-white/10 p-4">
           <Link
             to="/"
             target="_blank"
             rel="noreferrer"
-            className="mb-2 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+            className="mb-2 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
           >
-            <ExternalLink
-              size={19}
-              strokeWidth={2}
-              className="shrink-0"
-            />
-
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5">
+              <ExternalLink size={18} strokeWidth={2} />
+            </div>
             <span>Lihat Website</span>
           </Link>
 
@@ -255,85 +235,77 @@ export default function AdminLayout() {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-red-500/15 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-red-300 transition hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoggingOut ? (
-              <LoaderCircle
-                size={19}
-                className="shrink-0 animate-spin"
-              />
-            ) : (
-              <LogOut
-                size={19}
-                strokeWidth={2}
-                className="shrink-0"
-              />
-            )}
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10">
+              {isLoggingOut ? (
+                <LoaderCircle size={18} className="animate-spin" />
+              ) : (
+                <LogOut size={18} strokeWidth={2} />
+              )}
+            </div>
 
             <span>
-              {isLoggingOut
-                ? "Sedang keluar..."
-                : "Logout"}
+              {isLoggingOut ? "Sedang keluar..." : "Logout"}
             </span>
           </button>
 
           {logoutError && (
-            <p className="mt-2 px-4 text-xs leading-5 text-red-300">
+            <p className="mt-2 px-2 text-xs leading-5 text-red-300">
               {logoutError}
             </p>
           )}
         </div>
       </aside>
 
-      {/* Bagian kanan dashboard */}
+      {/* Main area */}
       <div className="min-w-0 flex-1">
-        {/* Header dashboard */}
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur md:px-8">
-          <div className="flex min-w-0 items-center gap-4">
-            {/* Tombol sidebar mobile */}
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="shrink-0 rounded-xl border border-slate-200 p-2.5 text-[#082B3A] transition hover:border-[#FF5A0A] hover:text-[#FF5A0A] lg:hidden"
-              aria-label="Buka sidebar"
-            >
-              <Menu size={21} />
-            </button>
+        {/* Header */}
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
+          <div className="flex h-20 items-center justify-between px-5 md:px-8">
+            <div className="flex min-w-0 items-center gap-4">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-[#082B3A] transition hover:border-[#FF5A0A] hover:text-[#FF5A0A] lg:hidden"
+                aria-label="Buka sidebar"
+              >
+                <Menu size={20} />
+              </button>
 
-            {/* Judul header */}
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold uppercase tracking-wider text-[#FF5A0A]">
-                Jasa Medika Transmedic
-              </p>
-
-              <h1 className="mt-1 truncate text-lg font-bold text-[#082B3A]">
-                Admin Dashboard
-              </h1>
-            </div>
-          </div>
-
-          {/* Profil user yang sedang login */}
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="max-w-[220px] text-right">
-              <p className="truncate text-sm font-semibold text-[#082B3A]">
-                {displayName}
-              </p>
-
-              <p className="truncate text-xs text-slate-500">
-                {roleLabel}
-              </p>
+              <div className="min-w-0">
+                <p className="truncate text-xs font-bold uppercase tracking-[0.18em] text-[#FF5A0A]">
+                  Jasa Medika Transmedic
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold text-[#082B3A]">
+                  Admin Dashboard
+                </h1>
+              </div>
             </div>
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0E8] font-bold text-[#FF5A0A]">
-              {avatarInitial}
+            <div className="hidden items-center gap-3 sm:flex">
+              <div className="text-right">
+                <p className="truncate text-sm font-semibold text-[#082B3A]">
+                  {displayName}
+                </p>
+                <p className="truncate text-xs text-slate-500">
+                  {roleLabel}
+                </p>
+              </div>
+
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FFF0E8] font-bold text-[#FF5A0A] ring-1 ring-orange-100">
+                {avatarInitial}
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Halaman melalui Outlet */}
-        <div className="min-h-[calc(100vh-5rem)]">
-          <Outlet />
-        </div>
+        {/* Page content */}
+        <main className="min-h-[calc(100vh-5rem)] p-5 md:p-8">
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+          </div>
+        </main>
       </div>
     </div>
   );

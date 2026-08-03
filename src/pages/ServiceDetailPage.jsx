@@ -1,108 +1,108 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
 import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  MessageCircle,
+  LoaderCircle,
+  RefreshCw,
 } from "lucide-react";
+import {
+  Link,
+  useParams,
+} from "react-router-dom";
+
 import { CTA } from "../components/Common";
-import { supabase } from "../lib/supabase";
+import { getPublishedServiceBySlug } from "../services/serviceService";
 
 export default function ServiceDetailPage() {
   const { slug } = useParams();
 
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadService = useCallback(async () => {
+    const normalizedSlug = String(
+      slug || ""
+    ).trim();
 
-    async function loadService() {
+    if (!normalizedSlug) {
+      setService(null);
+      setLoading(false);
+      setErrorMessage("");
+      return;
+    }
+
+    try {
       setLoading(true);
       setErrorMessage("");
 
-      try {
-        const { data, error } = await supabase
-          .from("services")
-          .select("*")
-          .eq("slug", slug)
-          .eq("status", "published")
-          .maybeSingle();
+      const data =
+        await getPublishedServiceBySlug(
+          normalizedSlug
+        );
 
-        if (error) {
-          throw error;
-        }
+      setService(data);
+    } catch (error) {
+      console.error(
+        "Detail Service gagal dimuat:",
+        error
+      );
 
-        if (isMounted) {
-          setService(data);
-        }
-      } catch (error) {
-        console.error("Supabase service detail error:", error);
-
-        if (isMounted) {
-          setErrorMessage(
-            "Detail layanan gagal dimuat. Silakan coba kembali."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    if (slug) {
-      loadService();
-    } else {
-      setLoading(false);
       setService(null);
-    }
 
-    return () => {
-      isMounted = false;
-    };
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Detail Service gagal dimuat."
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [slug]);
 
   useEffect(() => {
-    if (!service) return;
+    loadService();
+  }, [loadService]);
 
-    document.title = `${service.title} | JMT Group`;
+  useEffect(() => {
+    if (!service?.name) {
+      return undefined;
+    }
+
+    const previousTitle = document.title;
+
+    document.title = `${
+      service.seo_title || service.name
+    } | Jasa Medika Transmedic`;
 
     return () => {
-      document.title = "JMT Group";
+      document.title = previousTitle;
     };
   }, [service]);
 
-  function getServiceItems() {
-    if (!service?.items) return [];
-
-    if (Array.isArray(service.items)) {
-      return service.items;
-    }
-
-    if (typeof service.items === "string") {
-      return service.items
-        .split(/\r?\n|,/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-    }
-
-    return [];
-  }
-
-  const serviceItems = getServiceItems();
-
   if (loading) {
     return (
-      <main className="container-jmt min-h-[60vh] py-20">
-        <div className="mx-auto max-w-4xl animate-pulse">
-          <div className="h-4 w-40 rounded bg-slate-200" />
-          <div className="mt-8 h-10 w-3/4 rounded bg-slate-200" />
-          <div className="mt-5 h-5 w-full rounded bg-slate-100" />
-          <div className="mt-3 h-5 w-2/3 rounded bg-slate-100" />
-          <div className="mt-10 h-80 rounded-3xl bg-slate-200" />
+      <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6">
+        <div className="text-center">
+          <LoaderCircle
+            size={44}
+            className="mx-auto animate-spin text-orange"
+          />
+
+          <h1 className="mt-5 text-xl font-bold text-[#082B3A]">
+            Memuat detail layanan
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Data sedang diambil dari Supabase.
+          </p>
         </div>
       </main>
     );
@@ -110,98 +110,129 @@ export default function ServiceDetailPage() {
 
   if (errorMessage) {
     return (
-      <main className="container-jmt min-h-[60vh] py-20">
-        <div className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
-          <h1 className="text-xl font-bold text-red-800">
-            Terjadi kesalahan
-          </h1>
+      <>
+        <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6 py-16">
+          <div className="w-full max-w-xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <AlertTriangle size={29} />
+            </div>
 
-          <p className="mt-3 text-sm leading-6 text-red-700">
-            {errorMessage}
-          </p>
+            <h1 className="mt-6 text-2xl font-bold text-[#082B3A]">
+              Detail layanan gagal dimuat
+            </h1>
 
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-6 rounded-lg bg-red-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800"
-          >
-            Coba Lagi
-          </button>
-        </div>
-      </main>
+            <p className="mt-3 text-sm leading-7 text-red-600">
+              {errorMessage}
+            </p>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link
+                to="/services"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
+              >
+                <ArrowLeft size={17} />
+                Kembali
+              </Link>
+
+              <button
+                type="button"
+                onClick={loadService}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
+              >
+                <RefreshCw size={17} />
+                Coba Lagi
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <CTA />
+      </>
     );
   }
 
   if (!service) {
     return (
-      <main className="container-jmt min-h-[60vh] py-20">
-        <div className="mx-auto max-w-xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-orange">
-            404
-          </p>
+      <>
+        <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6 py-16">
+          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange/10 font-bold text-orange">
+              404
+            </div>
 
-          <h1 className="mt-3 text-3xl font-bold text-slate-900">
-            Layanan tidak ditemukan
-          </h1>
+            <h1 className="mt-6 text-3xl font-bold text-[#082B3A]">
+              Layanan tidak ditemukan
+            </h1>
 
-          <p className="mt-4 leading-7 text-slate-600">
-            Layanan yang Anda cari mungkin belum dipublikasikan, sudah
-            dipindahkan, atau alamatnya tidak tepat.
-          </p>
+            <p className="mt-4 text-sm leading-7 text-slate-500">
+              Layanan tidak tersedia, belum
+              dipublikasikan, atau slug tidak sesuai.
+            </p>
 
-          <Link
-            to="/services"
-            className="mt-7 inline-flex items-center gap-2 rounded-lg bg-orange px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-          >
-            <ArrowLeft size={18} />
-            Kembali ke Layanan
-          </Link>
-        </div>
-      </main>
+            <Link
+              to="/services"
+              className="mt-8 inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3 text-sm font-semibold text-white"
+            >
+              <ArrowLeft size={17} />
+              Kembali ke Layanan
+            </Link>
+          </div>
+        </main>
+
+        <CTA />
+      </>
     );
   }
+
+  const features = Array.isArray(
+    service.features
+  )
+    ? service.features
+    : [];
 
   return (
     <>
       <main>
-        <section className="border-b bg-gradient-to-br from-white via-cream/40 to-mist">
+        {/* Hero detail */}
+        <section className="border-b border-slate-200 bg-gradient-to-br from-white via-cream/40 to-mist">
           <div className="container-jmt py-14 md:py-20">
-            <nav
-              aria-label="Breadcrumb"
-              className="flex flex-wrap items-center gap-2 text-sm text-slate-500"
-            >
-              <Link to="/" className="transition hover:text-orange">
-                Beranda
+            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+              <Link
+                to="/"
+                className="hover:text-orange"
+              >
+                Home
               </Link>
 
               <span>/</span>
 
               <Link
                 to="/services"
-                className="transition hover:text-orange"
+                className="hover:text-orange"
               >
-                Layanan
+                Product & Services
               </Link>
 
               <span>/</span>
 
-              <span className="font-medium text-slate-800">
-                {service.title}
+              <span className="font-medium text-[#082B3A]">
+                {service.name}
               </span>
             </nav>
 
-            <div className="mt-10 grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="mt-10 grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-orange">
-                  {service.category || "Product & Services"}
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
+                  {service.category_name ||
+                    "Healthcare Service"}
                 </p>
 
-                <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight text-slate-900 md:text-5xl">
-                  {service.title}
+                <h1 className="mt-4 text-4xl font-bold leading-tight text-[#082B3A] md:text-5xl">
+                  {service.name}
                 </h1>
 
                 {service.short_description && (
-                  <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600 md:text-lg">
+                  <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600">
                     {service.short_description}
                   </p>
                 )}
@@ -209,7 +240,7 @@ export default function ServiceDetailPage() {
                 <div className="mt-8 flex flex-wrap gap-3">
                   <Link
                     to="/contact"
-                    className="inline-flex items-center gap-2 rounded-lg bg-orange px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+                    className="inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3.5 text-sm font-semibold text-white"
                   >
                     Konsultasikan Kebutuhan
                     <ArrowRight size={18} />
@@ -217,7 +248,7 @@ export default function ServiceDetailPage() {
 
                   <Link
                     to="/services"
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700 transition hover:border-orange hover:text-orange"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
                   >
                     <ArrowLeft size={18} />
                     Semua Layanan
@@ -229,25 +260,15 @@ export default function ServiceDetailPage() {
                 {service.image_url ? (
                   <img
                     src={service.image_url}
-                    alt={service.title}
-                    className="h-72 w-full rounded-3xl object-cover shadow-soft md:h-96"
+                    alt={service.name}
+                    className="h-72 w-full rounded-3xl border border-slate-200 object-cover shadow-soft md:h-96"
                   />
                 ) : (
-                  <div className="flex h-72 items-center justify-center rounded-3xl bg-white p-8 text-center shadow-soft md:h-96">
-                    <div>
-                      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-cream text-orange">
-                        <CheckCircle2 size={32} />
-                      </div>
-
-                      <p className="mt-5 font-semibold text-slate-800">
-                        Integrated Healthcare Solution
-                      </p>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
-                        Solusi profesional yang disesuaikan dengan
-                        kebutuhan organisasi Anda.
-                      </p>
-                    </div>
+                  <div className="flex h-72 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-soft md:h-96">
+                    <CheckCircle2
+                      size={60}
+                      className="text-orange"
+                    />
                   </div>
                 )}
               </div>
@@ -255,40 +276,34 @@ export default function ServiceDetailPage() {
           </div>
         </section>
 
+        {/* Isi detail */}
         <section className="container-jmt py-14 md:py-20">
-          <div className="grid gap-10 lg:grid-cols-[1fr_340px]">
-            <article>
-              <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
-                Tentang Layanan
-              </p>
+          <div className="mx-auto max-w-5xl">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
+              Tentang Layanan
+            </p>
 
-              <h2 className="mt-3 text-3xl font-bold text-slate-900">
-                Solusi yang sesuai dengan kebutuhan Anda
-              </h2>
+            <h2 className="mt-3 text-3xl font-bold text-[#082B3A]">
+              Solusi untuk kebutuhan organisasi Anda
+            </h2>
 
-              {service.description ? (
-                <div className="mt-6 whitespace-pre-line text-base leading-8 text-slate-600">
-                  {service.description}
-                </div>
-              ) : (
-                <p className="mt-6 leading-8 text-slate-600">
-                  Informasi lengkap mengenai layanan ini akan segera
-                  tersedia. Silakan hubungi tim kami untuk memperoleh
-                  penjelasan dan konsultasi lebih lanjut.
+            <div className="mt-6 whitespace-pre-line text-base leading-9 text-slate-600">
+              {service.full_description ||
+                "Informasi lengkap layanan belum tersedia."}
+            </div>
+
+            {features.length > 0 && (
+              <div className="mt-12">
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
+                  Fitur dan Cakupan
                 </p>
-              )}
 
-              {serviceItems.length > 0 && (
-                <div className="mt-10">
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    Cakupan Layanan
-                  </h2>
-
-                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                    {serviceItems.map((item, index) => (
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  {features.map(
+                    (feature, index) => (
                       <div
-                        key={`${item}-${index}`}
-                        className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4"
+                        key={`${feature}-${index}`}
+                        className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
                       >
                         <CheckCircle2
                           size={20}
@@ -296,47 +311,14 @@ export default function ServiceDetailPage() {
                         />
 
                         <span className="text-sm leading-6 text-slate-600">
-                          {item}
+                          {feature}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                    )
+                  )}
                 </div>
-              )}
-            </article>
-
-            <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-soft lg:sticky lg:top-28">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-cream text-orange">
-                <MessageCircle size={25} />
               </div>
-
-              <h2 className="mt-5 text-xl font-bold text-slate-900">
-                Butuh informasi lebih lanjut?
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                Diskusikan kebutuhan organisasi Anda bersama tim JMT
-                Group.
-              </p>
-
-              <Link
-                to="/contact"
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-              >
-                Hubungi Tim Kami
-                <ArrowRight size={17} />
-              </Link>
-
-              <div className="mt-6 border-t border-slate-100 pt-6">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Kategori
-                </p>
-
-                <p className="mt-2 text-sm font-semibold text-slate-700">
-                  {service.category || "Healthcare Service"}
-                </p>
-              </div>
-            </aside>
+            )}
           </div>
         </section>
       </main>

@@ -8,12 +8,12 @@ import {
 
 import { CTA, SectionHeading } from "../components/Common";
 import FeaturedPortfolioSection from "../components/FeaturedPortfolioSection";
+import FeaturedInsightSection from "../components/FeaturedInsightSection";
+import FeaturedServiceSection from "../components/FeaturedServiceSection";
 
 import {
   stats,
   serviceCategories,
-  featuredServices,
-  insights,
 } from "../data/siteData";
 
 export default function HomePage() {
@@ -176,94 +176,13 @@ export default function HomePage() {
       </section>
 
       {/* FEATURED SERVICES */}
-      <section className="bg-mist py-20">
-        <div className="container-jmt">
-          <SectionHeading
-            kicker="Featured Solutions"
-            title="Teknologi yang mendukung pelayanan modern"
-          />
-
-          <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-            {featuredServices.map(
-              ({
-                title,
-                category,
-                description,
-                icon: Icon,
-              }) => (
-                <article
-                  key={title}
-                  className="card p-6"
-                >
-                  <Icon
-                    className="text-orange"
-                    size={34}
-                  />
-
-                  <p className="mt-6 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                    {category}
-                  </p>
-
-                  <h3 className="mt-2 font-semibold">
-                    {title}
-                  </h3>
-
-                  <p className="mt-3 text-xs leading-6 text-slate-500">
-                    {description}
-                  </p>
-                </article>
-              )
-            )}
-          </div>
-        </div>
-      </section>
+      <FeaturedServiceSection />
 
       {/* PORTFOLIO DARI SUPABASE */}
       <FeaturedPortfolioSection />
 
       {/* INSIGHT */}
-      <section className="bg-cream py-20">
-        <div className="container-jmt">
-          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-            <SectionHeading
-              kicker="Insight & News"
-              title="Update terbaru dari JMT Group"
-            />
-
-            <Link
-              to="/insight"
-              className="text-sm font-semibold text-orange"
-            >
-              View All Insights →
-            </Link>
-          </div>
-
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {insights.map((item) => (
-              <article
-                key={item.title}
-                className="card p-6"
-              >
-                <span className="rounded-full bg-cream px-3 py-1 text-[10px] font-bold text-orange">
-                  {item.type}
-                </span>
-
-                <p className="mt-5 text-xs text-slate-400">
-                  {item.date}
-                </p>
-
-                <h3 className="mt-3 font-semibold leading-6">
-                  {item.title}
-                </h3>
-
-                <p className="mt-3 text-xs leading-6 text-slate-500">
-                  {item.excerpt}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <FeaturedInsightSection />
 
       <CTA />
     </>
