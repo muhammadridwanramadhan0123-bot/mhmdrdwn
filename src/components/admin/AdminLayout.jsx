@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
+  Building2,
   ExternalLink,
   LayoutDashboard,
   LoaderCircle,
@@ -45,6 +46,12 @@ const navigationItems = [
     to: "/admin/services",
     icon: Stethoscope,
     end: false,
+  },
+  {
+  label: "Company",
+  to: "/admin/company",
+  icon: Building2,
+  end: false,
   },
   {
   label: "Pesan Masuk",

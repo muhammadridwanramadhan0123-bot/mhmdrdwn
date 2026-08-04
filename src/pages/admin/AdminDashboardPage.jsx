@@ -28,6 +28,7 @@ import { getAdminPortfolios } from "../../services/portfolioService";
 import { getAdminInsights } from "../../services/insightService";
 import { getAdminServices } from "../../services/serviceService";
 import { getAdminContactMessages } from "../../services/contactMessageService";
+import AdminCompanyDashboardSection from "../../components/admin/AdminCompanyDashboardSection";
 
 /*
  * Status untuk Portfolio, Insight, dan Service.
@@ -781,6 +782,9 @@ export default function AdminDashboardPage() {
               );
             })}
           </section>
+
+           {/* Ringkasan Company */}
+          <AdminCompanyDashboardSection />
 
           {/* Konten utama */}
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">

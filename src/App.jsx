@@ -60,6 +60,16 @@ import AdminServiceEditPage from "./pages/admin/AdminServiceEditPage";
 import AdminContactMessagePage from "./pages/admin/AdminContactMessagePage";
 import AdminContactMessageDetailPage from "./pages/admin/AdminContactMessageDetailPage";
 
+/* =========================
+   SETTING
+========================= */
+import AdminCompanyPage from "./pages/admin/AdminCompanyPage";
+import AdminCompanyAboutPage from "./pages/admin/AdminCompanyAboutPage";
+import AdminCompanyLocationPage from "./pages/admin/AdminCompanyLocationPage";
+import AdminCompanyMilestonesPage from "./pages/admin/AdminCompanyMilestonesPage";
+import AdminCompanyPartnersPage from "./pages/admin/AdminCompanyPartnersPage";
+import AdminCompanyCareersPage from "./pages/admin/AdminCompanyCareersPage";
+
 function ScrollTop() {
   const { pathname } = useLocation();
 
@@ -240,6 +250,47 @@ export default function App() {
             path="messages/:id"
             element={<AdminContactMessageDetailPage />}
           />
+
+          {/* COMPANY MANAGEMENT */}
+         <Route
+  path="company"
+  element={<AdminCompanyPage />}
+/>
+
+<Route
+  path="company/about-us"
+  element={<AdminCompanyAboutPage />}
+/>
+
+<Route
+  path="company/location"
+  element={<AdminCompanyLocationPage />}
+/>
+
+<Route
+  path="company/milestones"
+  element={<AdminCompanyMilestonesPage />}
+/>
+
+<Route
+  path="company/partners"
+  element={<AdminCompanyPartnersPage />}
+/>
+
+<Route
+  path="company/careers"
+  element={<AdminCompanyCareersPage />}
+/>
+
+<Route
+  path="company/*"
+  element={
+    <Navigate
+      to="/admin/company"
+      replace
+    />
+  }
+/>
         </Route>
 
         {/* =========================
