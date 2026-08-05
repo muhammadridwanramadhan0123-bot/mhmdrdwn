@@ -19,7 +19,10 @@ import {
   Menu,
   Phone,
   X,
+  Youtube,
 } from "lucide-react";
+
+import WhatsAppFloatingButton from "./WhatsAppFloatingButton";
 
 const nav = [
   ["Home", "/"],
@@ -55,6 +58,24 @@ const companyNavigation = [
     label: "Career",
     to: "/company/career",
     description: "Kesempatan bergabung bersama JMT",
+  },
+];
+
+const socialMediaLinks = [
+  {
+    label: "Instagram",
+    url: "https://www.instagram.com/jmtgroup.id/",
+    icon: Instagram,
+  },
+  {
+    label: "LinkedIn",
+    url: "https://www.linkedin.com/company/jmtgroupid/",
+    icon: Linkedin,
+  },
+  {
+    label: "YouTube",
+    url: "https://www.youtube.com/@jmtgroupid",
+    icon: Youtube,
   },
 ];
 
@@ -459,19 +480,28 @@ export default function Layout() {
               terintegrasi di Indonesia.
             </p>
 
-            <div className="mt-6 flex gap-3">
-              {[Instagram, Linkedin].map(
-                (Icon, index) => (
-                  <a
-                    key={index}
-                    href="#"
-                    className="rounded-lg border border-white/15 p-2.5 hover:border-orange hover:text-orange"
-                  >
-                    <Icon size={18} />
-                  </a>
-                )
-              )}
-            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+  {socialMediaLinks.map((item) => {
+    const Icon = item.icon;
+
+    return (
+      <a
+        key={item.label}
+        href={item.url}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Kunjungi ${item.label} Jasa Medika Transmedic`}
+        title={item.label}
+        className="group flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-slate-300 transition duration-300 hover:-translate-y-1 hover:border-orange hover:bg-orange hover:text-white"
+      >
+        <Icon
+          size={19}
+          className="transition-transform duration-300 group-hover:scale-110"
+        />
+      </a>
+    );
+  })}
+</div>
           </div>
 
           <div>
@@ -537,6 +567,7 @@ export default function Layout() {
           Medika Transmedic. All rights reserved.
         </div>
       </footer>
+      <WhatsAppFloatingButton />
     </div>
   );
 }

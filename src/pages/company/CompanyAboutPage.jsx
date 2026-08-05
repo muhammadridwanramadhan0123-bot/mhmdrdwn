@@ -8,12 +8,13 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Building2,
+  CalendarDays,
   CheckCircle2,
   Cpu,
   Factory,
+  FileText,
   GraduationCap,
   HeartPulse,
-  LoaderCircle,
   PackageCheck,
   RefreshCw,
   ShieldCheck,
@@ -29,7 +30,14 @@ import {
   SectionHeading,
 } from "../../components/Common";
 
-import { getCompanyProfile } from "../../services/companyService";
+import {
+  getCompanyProfile,
+} from "../../services/companyService";
+
+import {
+  getActiveAwards,
+  getActiveCertifications,
+} from "../../services/companyCredentialService";
 
 /*
  * Informasi bidang usaha mengikuti
@@ -91,42 +99,6 @@ const companyStatistics = [
 ];
 
 /*
- * Informasi penghargaan yang sebelumnya
- * ditampilkan pada halaman About Us lama.
- */
-const awardItems = [
-  {
-    title: "RSUD dr. Iskak Tulungagung",
-    description:
-      "Transformasi digital mendukung peningkatan layanan dan kinerja rumah sakit serta memperoleh berbagai penghargaan layanan publik dan inovasi.",
-    highlights: [
-      "Public Service of the Year 2018",
-      "The Inspiring and Innovative Hospital 2018",
-      "Top Digital Award 2021",
-    ],
-  },
-  {
-    title:
-      "RS Bhayangkara Tk. I R. Said Sukanto",
-    description:
-      "Meraih penghargaan BPJS Awards 2021 untuk kategori rumah sakit tipe A yang berkomitmen memberikan pelayanan terbaik kepada peserta JKN-KIS.",
-    highlights: [
-      "BPJS Awards 2021",
-      "Kategori Rumah Sakit Tipe A",
-    ],
-  },
-  {
-    title: "RSUD Cibinong",
-    description:
-      "Mendapatkan apresiasi atas komitmen dalam integrasi sistem antrean daring dan integrasi proses klaim.",
-    highlights: [
-      "Integrasi Antrean Online",
-      "Integrasi Sistem Klaim",
-    ],
-  },
-];
-
-/*
  * Daftar perusahaan yang ditampilkan
  * pada bagian Corporate Holding.
  */
@@ -137,7 +109,8 @@ const subsidiaryItems = [
       "Network Infrastructure & Software Engineering",
     description:
       "Berfokus pada layanan jaringan komputer, rekayasa perangkat lunak, dan implementasi teknologi informasi untuk sektor kesehatan, pemerintah, dan perusahaan.",
-    website: "https://netkromsolution.com",
+    website:
+      "https://netkromsolution.com",
     icon: Cpu,
   },
   {
@@ -146,7 +119,8 @@ const subsidiaryItems = [
       "Healthcare Information System",
     description:
       "Penyedia layanan Sistem Informasi Manajemen Rumah Sakit berbasis web untuk fasilitas kesehatan, pemerintah, dan sektor swasta.",
-    website: "https://transindodata.com",
+    website:
+      "https://transindodata.com",
     icon: HeartPulse,
   },
   {
@@ -155,7 +129,8 @@ const subsidiaryItems = [
       "Hospital Information System",
     description:
       "Perusahaan pengembang Sistem Informasi Manajemen Rumah Sakit yang telah menghadirkan berbagai solusi digital untuk fasilitas kesehatan Indonesia.",
-    website: "https://jasamedika.co.id",
+    website:
+      "https://jasamedika.co.id",
     icon: Building2,
   },
   {
@@ -164,7 +139,8 @@ const subsidiaryItems = [
       "Facility & Interior Management",
     description:
       "Penyedia solusi furnitur, interior, dan pengelolaan fasilitas dengan pendekatan terintegrasi sesuai kebutuhan mitra dan klien.",
-    website: "https://temp.co.id",
+    website:
+      "https://temp.co.id",
     icon: Factory,
   },
   {
@@ -181,7 +157,8 @@ const subsidiaryItems = [
       "Healthcare Logistics Management",
     description:
       "Mendukung pengelolaan logistik farmasi, alat kesehatan, dan bahan medis habis pakai agar lebih terpantau dan efisien.",
-    website: "https://trisprima.com",
+    website:
+      "https://trisprima.com",
     icon: PackageCheck,
   },
 ];
@@ -214,7 +191,9 @@ function normalizeMissionList(value) {
 
   if (Array.isArray(value)) {
     const result = value
-      .map((item) => String(item || "").trim())
+      .map((item) =>
+        String(item || "").trim()
+      )
       .filter(Boolean);
 
     return result.length > 0
@@ -260,6 +239,28 @@ function normalizeMissionList(value) {
     : fallbackMission;
 }
 
+function getCertificationCategoryClass(
+  category
+) {
+  switch (category) {
+    case "ISO":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+
+    case "Hak Cipta":
+      return "border-violet-200 bg-violet-50 text-violet-700";
+
+    case "PSE":
+      return "border-cyan-200 bg-cyan-50 text-cyan-700";
+
+    case "BSSN":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+
+    case "Sertifikat Lain":
+    default:
+      return "border-slate-200 bg-slate-100 text-slate-700";
+  }
+}
+
 function AboutPageLoading() {
   return (
     <>
@@ -276,7 +277,9 @@ function AboutPageLoading() {
 
             <div className="mt-8 space-y-3">
               <div className="h-4 animate-pulse rounded bg-slate-100" />
+
               <div className="h-4 animate-pulse rounded bg-slate-100" />
+
               <div className="h-4 w-4/5 animate-pulse rounded bg-slate-100" />
             </div>
           </div>
@@ -287,39 +290,137 @@ function AboutPageLoading() {
 }
 
 export default function CompanyAboutPage() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] =
+    useState(null);
+
+  const [
+    certifications,
+    setCertifications,
+  ] = useState([]);
+
+  const [awards, setAwards] =
+    useState([]);
+
   const [loading, setLoading] =
     useState(true);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  const loadCompanyProfile =
+  const loadCompanyData =
     useCallback(async () => {
       try {
         setLoading(true);
         setErrorMessage("");
 
-        const data =
-          await getCompanyProfile();
+        const results =
+          await Promise.allSettled([
+            getCompanyProfile(),
+            getActiveCertifications(),
+            getActiveAwards(),
+          ]);
 
-        setProfile(data);
+        const [
+          profileResult,
+          certificationResult,
+          awardResult,
+        ] = results;
+
+        const failedModules = [];
+
+        if (
+          profileResult.status ===
+          "fulfilled"
+        ) {
+          setProfile(
+            profileResult.value
+          );
+        } else {
+          setProfile(null);
+
+          failedModules.push(
+            "profil perusahaan"
+          );
+
+          console.error(
+            "Profil perusahaan gagal dimuat:",
+            profileResult.reason
+          );
+        }
+
+        if (
+          certificationResult.status ===
+          "fulfilled"
+        ) {
+          setCertifications(
+            Array.isArray(
+              certificationResult.value
+            )
+              ? certificationResult.value
+              : []
+          );
+        } else {
+          setCertifications([]);
+
+          failedModules.push(
+            "sertifikasi"
+          );
+
+          console.error(
+            "Sertifikasi gagal dimuat:",
+            certificationResult.reason
+          );
+        }
+
+        if (
+          awardResult.status ===
+          "fulfilled"
+        ) {
+          setAwards(
+            Array.isArray(
+              awardResult.value
+            )
+              ? awardResult.value
+              : []
+          );
+        } else {
+          setAwards([]);
+
+          failedModules.push(
+            "penghargaan"
+          );
+
+          console.error(
+            "Penghargaan gagal dimuat:",
+            awardResult.reason
+          );
+        }
+
+        if (
+          failedModules.length > 0
+        ) {
+          setErrorMessage(
+            `Sebagian data backend gagal dimuat: ${failedModules.join(
+              ", "
+            )}.`
+          );
+        }
       } catch (error) {
         console.error(
-          "Profil perusahaan gagal dimuat:",
+          "Halaman About Us gagal dimuat:",
           error
         );
 
-        /*
-         * Halaman tetap menggunakan konten
-         * fallback agar tidak kosong.
-         */
         setProfile(null);
+        setCertifications([]);
+        setAwards([]);
 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Profil perusahaan gagal dimuat."
+            : "Halaman About Us gagal dimuat."
         );
       } finally {
         setLoading(false);
@@ -327,8 +428,8 @@ export default function CompanyAboutPage() {
     }, []);
 
   useEffect(() => {
-    loadCompanyProfile();
-  }, [loadCompanyProfile]);
+    loadCompanyData();
+  }, [loadCompanyData]);
 
   const missionItems = useMemo(
     () =>
@@ -374,19 +475,21 @@ export default function CompanyAboutPage() {
 
               <div>
                 <p className="font-semibold text-amber-800">
-                  Data backend belum dapat dimuat
+                  Sebagian data backend belum
+                  dapat dimuat
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  {errorMessage} Halaman sedang
-                  menampilkan konten cadangan.
+                  {errorMessage} Bagian lain
+                  pada halaman tetap dapat
+                  ditampilkan.
                 </p>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={loadCompanyProfile}
+              onClick={loadCompanyData}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
             >
               <RefreshCw size={16} />
@@ -465,8 +568,9 @@ export default function CompanyAboutPage() {
             Dengan semangat inovasi dan
             kolaborasi, JMT Group berkomitmen
             mendukung terbentuknya ekosistem
-            kesehatan yang modern, berkelanjutan,
-            dan memiliki daya saing tinggi.
+            kesehatan yang modern,
+            berkelanjutan, dan memiliki daya
+            saing tinggi.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -630,125 +734,278 @@ export default function CompanyAboutPage() {
         </div>
       </section>
 
-      {/* Awards */}
-      <section className="container-jmt py-20">
-        <SectionHeading
-          kicker="Awards & Recognition"
-          title="Transformasi yang menghasilkan dampak"
-          description="Berbagai fasilitas kesehatan mitra memperoleh pengakuan melalui peningkatan layanan, integrasi sistem, dan inovasi digital."
-          center
-        />
-
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          {awardItems.map((award) => (
-            <article
-              key={award.title}
-              className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
-                <Trophy size={26} />
-              </div>
-
-              <h3 className="mt-6 text-xl font-bold leading-7 text-ink">
-                {award.title}
-              </h3>
-
-              <p className="mt-4 text-sm leading-7 text-slate-500">
-                {award.description}
-              </p>
-
-              <div className="mt-6 space-y-3 border-t border-slate-100 pt-5">
-                {award.highlights.map(
-                  (highlight) => (
-                    <div
-                      key={highlight}
-                      className="flex items-start gap-3"
-                    >
-                      <CheckCircle2
-                        size={17}
-                        className="mt-0.5 shrink-0 text-emerald-500"
-                      />
-
-                      <p className="text-sm leading-6 text-slate-600">
-                        {highlight}
-                      </p>
-                    </div>
-                  )
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Subsidiaries */}
-      <section className="bg-ink py-20 text-white">
-        <div className="container-jmt">
+      {/* Certifications & Accreditations */}
+      {certifications.length > 0 && (
+        <section className="container-jmt py-20">
           <SectionHeading
-            kicker="Corporate Holding"
-            title="Jasamedika Transmedic Subsidiaries"
-            description="Perusahaan dalam ekosistem JMT Group memiliki keahlian yang saling melengkapi dalam teknologi kesehatan, infrastruktur, fasilitas, IoT, dan logistik."
+            kicker="Certifications & Accreditations"
+            title="Standar, legalitas, dan keamanan yang terpercaya"
+            description="Sertifikasi, registrasi, dan pengakuan yang memperkuat komitmen JMT Group terhadap kualitas layanan, legalitas, dan keamanan sistem."
+            center
           />
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {subsidiaryItems.map((item) => {
-              const Icon = item.icon;
-
-              const cardContent = (
-                <>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-white/10 p-3 text-orange">
-                      <Icon size={24} />
-                    </div>
-
-                    {item.website && (
-                      <ArrowUpRight
-                        size={18}
-                        className="text-white/30 transition group-hover:text-orange"
+          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {certifications.map(
+              (certification) => (
+                <article
+                  key={certification.id}
+                  className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
+                >
+                  <div className="relative flex h-52 items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 to-mist">
+                    {certification.image_url ? (
+                      <img
+                        src={
+                          certification.image_url
+                        }
+                        alt={
+                          certification.title
+                        }
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
+                    ) : (
+                      <div className="text-center">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white text-orange shadow-sm">
+                          <ShieldCheck
+                            size={38}
+                          />
+                        </div>
+
+                        <p className="mt-4 text-sm font-semibold text-slate-400">
+                          {
+                            certification.category
+                          }
+                        </p>
+                      </div>
+                    )}
+
+                    <span
+                      className={`absolute left-5 top-5 rounded-full border px-3 py-1.5 text-xs font-semibold ${getCertificationCategoryClass(
+                        certification.category
+                      )}`}
+                    >
+                      {
+                        certification.category
+                      }
+                    </span>
+                  </div>
+
+                  <div className="p-7">
+                    {certification.issued_year && (
+                      <p className="flex items-center gap-2 text-sm font-semibold text-orange">
+                        <CalendarDays
+                          size={16}
+                        />
+
+                        Diterbitkan{" "}
+                        {
+                          certification.issued_year
+                        }
+                      </p>
+                    )}
+
+                    <h3 className="mt-4 text-xl font-bold leading-8 text-ink">
+                      {
+                        certification.title
+                      }
+                    </h3>
+
+                    {certification.description && (
+                      <p className="mt-4 text-sm leading-7 text-slate-500">
+                        {
+                          certification.description
+                        }
+                      </p>
+                    )}
+
+                    {certification.document_url && (
+                      <div className="mt-6 border-t border-slate-100 pt-5">
+                        <a
+                          href={
+                            certification.document_url
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-orange transition hover:underline"
+                        >
+                          <FileText
+                            size={17}
+                          />
+
+                          Lihat Dokumen
+
+                          <ArrowUpRight
+                            size={16}
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              )
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Awards & Recognition */}
+      {awards.length > 0 && (
+        <section className="bg-mist py-20">
+          <div className="container-jmt">
+            <SectionHeading
+              kicker="Awards & Recognition"
+              title="Penghargaan atas inovasi dan kontribusi"
+              description="Pengakuan yang diterima perusahaan atas kontribusi, inovasi, kolaborasi, dan pengembangan solusi dalam ekosistem layanan kesehatan."
+              center
+            />
+
+            <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {awards.map((award) => (
+                <article
+                  key={award.id}
+                  className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl"
+                >
+                  <div className="relative flex h-56 items-center justify-center overflow-hidden bg-white">
+                    {award.image_url ? (
+                      <img
+                        src={award.image_url}
+                        alt={award.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-amber-50 text-amber-600">
+                          <Trophy
+                            size={38}
+                          />
+                        </div>
+
+                        <p className="mt-4 text-sm font-semibold text-slate-400">
+                          Awards & Recognition
+                        </p>
+                      </div>
+                    )}
+
+                    {award.year && (
+                      <span className="absolute left-5 top-5 rounded-full bg-orange px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                        {award.year}
+                      </span>
                     )}
                   </div>
 
-                  <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-orange">
-                    {item.category}
-                  </p>
+                  <div className="p-7">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                      <Trophy size={23} />
+                    </div>
 
-                  <h3 className="mt-3 text-xl font-bold">
-                    {item.name}
-                  </h3>
+                    <h3 className="mt-5 text-xl font-bold leading-8 text-ink">
+                      {award.title}
+                    </h3>
 
-                  <p className="mt-4 text-sm leading-7 text-white/60">
-                    {item.description}
-                  </p>
-                </>
-              );
+                    {award.institution && (
+                      <p className="mt-3 flex items-start gap-2 text-sm font-semibold leading-6 text-orange">
+                        <Building2
+                          size={16}
+                          className="mt-0.5 shrink-0"
+                        />
 
-              if (item.website) {
-                return (
-                  <a
-                    key={item.name}
-                    href={item.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group rounded-3xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1 hover:border-orange/40 hover:bg-white/10"
-                  >
-                    {cardContent}
-                  </a>
-                );
-              }
+                        {award.institution}
+                      </p>
+                    )}
 
-              return (
-                <article
-                  key={item.name}
-                  className="group rounded-3xl border border-white/10 bg-white/5 p-7"
-                >
-                  {cardContent}
+                    {award.description && (
+                      <p className="mt-4 text-sm leading-7 text-slate-500">
+                        {award.description}
+                      </p>
+                    )}
+                  </div>
                 </article>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Subsidiaries */}
+      {/* Subsidiaries */}
+<section className="bg-ink py-20 text-white">
+  <div className="container-jmt">
+    <div className="max-w-4xl">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">
+        Corporate Holding
+      </p>
+
+      <h2 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+        Jasamedika Transmedic Subsidiaries
+      </h2>
+
+      <p className="mt-5 max-w-3xl text-sm leading-7 text-white/65 md:text-base">
+        Perusahaan dalam ekosistem JMT Group memiliki keahlian yang saling
+        melengkapi dalam teknologi kesehatan, infrastruktur, fasilitas,
+        IoT, dan logistik.
+      </p>
+    </div>
+
+    <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {subsidiaryItems.map((item) => {
+        const Icon = item.icon;
+
+        const cardContent = (
+          <>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-white/10 p-3 text-orange">
+                <Icon size={24} />
+              </div>
+
+              {item.website && (
+                <ArrowUpRight
+                  size={18}
+                  className="text-white/30 transition group-hover:text-orange"
+                />
+              )}
+            </div>
+
+            <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-orange">
+              {item.category}
+            </p>
+
+            <h3 className="mt-3 text-xl font-bold text-white">
+              {item.name}
+            </h3>
+
+            <p className="mt-4 text-sm leading-7 text-white/60">
+              {item.description}
+            </p>
+          </>
+        );
+
+        if (item.website) {
+          return (
+            <a
+              key={item.name}
+              href={item.website}
+              target="_blank"
+              rel="noreferrer"
+              className="group rounded-3xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1 hover:border-orange/40 hover:bg-white/10"
+            >
+              {cardContent}
+            </a>
+          );
+        }
+
+        return (
+          <article
+            key={item.name}
+            className="group rounded-3xl border border-white/10 bg-white/5 p-7"
+          >
+            {cardContent}
+          </article>
+        );
+      })}
+    </div>
+  </div>
+</section>
 
       <CTA />
     </>

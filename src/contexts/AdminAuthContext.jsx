@@ -18,7 +18,7 @@ export function AdminAuthProvider({ children }) {
   const [authError, setAuthError] = useState("");
 
   /*
-   * Mengambil profile berdasarkan:
+   * Mengambil profil berdasarkan:
    * profiles.id = auth.users.id
    */
   const loadProfile = useCallback(async (userId) => {
@@ -40,7 +40,8 @@ export function AdminAuthProvider({ children }) {
   }, []);
 
   /*
-   * Menyamakan session Auth dengan profile database.
+   * Menyamakan session Supabase Auth
+   * dengan data profile di database.
    */
   const synchronizeSession = useCallback(
     async (session, showLoading = true) => {
@@ -88,7 +89,8 @@ export function AdminAuthProvider({ children }) {
   );
 
   /*
-   * Mengambil session saat aplikasi pertama kali dibuka.
+   * Memeriksa session ketika aplikasi
+   * pertama kali dibuka.
    */
   useEffect(() => {
     let isMounted = true;
@@ -107,11 +109,18 @@ export function AdminAuthProvider({ children }) {
           throw error;
         }
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
-        await synchronizeSession(session, false);
+        await synchronizeSession(
+          session,
+          false
+        );
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         console.error(
           "Gagal memeriksa session login:",
@@ -136,13 +145,16 @@ export function AdminAuthProvider({ children }) {
     initializeAuth();
 
     /*
-     * Memantau login, logout, dan perubahan session.
+     * Memantau login, logout,
+     * dan perubahan session.
      */
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         void synchronizeSession(session);
       }
@@ -155,7 +167,8 @@ export function AdminAuthProvider({ children }) {
   }, [synchronizeSession]);
 
   /*
-   * Memuat ulang profile setelah role atau data profile berubah.
+   * Memuat ulang profile setelah role
+   * atau data profile berubah.
    */
   const refreshProfile = useCallback(async () => {
     if (!user?.id) {
@@ -166,7 +179,9 @@ export function AdminAuthProvider({ children }) {
     try {
       setAuthError("");
 
-      const updatedProfile = await loadProfile(user.id);
+      const updatedProfile = await loadProfile(
+        user.id
+      );
 
       setProfile(updatedProfile);
 
@@ -188,10 +203,11 @@ export function AdminAuthProvider({ children }) {
   }, [loadProfile, user]);
 
   /*
-   * Logout dipusatkan di context.
+   * Logout dipusatkan melalui context.
    */
   const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } =
+      await supabase.auth.signOut();
 
     if (error) {
       throw error;
@@ -202,12 +218,15 @@ export function AdminAuthProvider({ children }) {
     setAuthError("");
   }, []);
 
-  const role = String(profile?.role || "")
+  const role = String(
+    profile?.role || ""
+  )
     .trim()
     .toLowerCase();
 
   const isAdmin = role === "admin";
   const isEditor = role === "editor";
+  const isViewer = role === "viewer";
 
   const isContentManager =
     isAdmin || isEditor;
@@ -221,6 +240,7 @@ export function AdminAuthProvider({ children }) {
       authError,
       isAdmin,
       isEditor,
+      isViewer,
       isContentManager,
       refreshProfile,
       signOut,
@@ -233,6 +253,7 @@ export function AdminAuthProvider({ children }) {
       authError,
       isAdmin,
       isEditor,
+      isViewer,
       isContentManager,
       refreshProfile,
       signOut,
@@ -247,7 +268,9 @@ export function AdminAuthProvider({ children }) {
 }
 
 export function useAdminAuth() {
-  const context = useContext(AdminAuthContext);
+  const context = useContext(
+    AdminAuthContext
+  );
 
   if (!context) {
     throw new Error(

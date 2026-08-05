@@ -69,6 +69,9 @@ import AdminCompanyLocationPage from "./pages/admin/AdminCompanyLocationPage";
 import AdminCompanyMilestonesPage from "./pages/admin/AdminCompanyMilestonesPage";
 import AdminCompanyPartnersPage from "./pages/admin/AdminCompanyPartnersPage";
 import AdminCompanyCareersPage from "./pages/admin/AdminCompanyCareersPage";
+import AdminCompanyCertificationsPage from "./pages/admin/AdminCompanyCertificationsPage";
+import AdminCompanyAwardsPage from "./pages/admin/AdminCompanyAwardsPage";
+
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -280,6 +283,20 @@ export default function App() {
 <Route
   path="company/careers"
   element={<AdminCompanyCareersPage />}
+/>
+
+<Route
+  path="company/certifications"
+  element={
+    <AdminCompanyCertificationsPage />
+  }
+/>
+
+<Route
+  path="company/awards"
+  element={
+    <AdminCompanyAwardsPage />
+  }
 />
 
 <Route

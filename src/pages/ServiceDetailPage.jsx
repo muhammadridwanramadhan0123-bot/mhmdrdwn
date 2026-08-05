@@ -19,6 +19,51 @@ import {
 import { CTA } from "../components/Common";
 import { getPublishedServiceBySlug } from "../services/serviceService";
 
+function normalizeFeatures(value) {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        String(item || "").trim()
+      )
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    const normalizedValue = value.trim();
+
+    if (!normalizedValue) {
+      return [];
+    }
+
+    try {
+      const parsedValue = JSON.parse(
+        normalizedValue
+      );
+
+      if (Array.isArray(parsedValue)) {
+        return parsedValue
+          .map((item) =>
+            String(item || "").trim()
+          )
+          .filter(Boolean);
+      }
+    } catch {
+      // Jika bukan JSON, pisahkan per baris atau koma.
+    }
+
+    return normalizedValue
+      .split(/\r?\n|,/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export default function ServiceDetailPage() {
   const { slug } = useParams();
 
@@ -184,11 +229,16 @@ export default function ServiceDetailPage() {
     );
   }
 
-  const features = Array.isArray(
-    service.features
-  )
-    ? service.features
-    : [];
+const features = normalizeFeatures(
+  service.features
+);
+
+const servicesBackUrl =
+  service.category_slug
+    ? `/services?category=${encodeURIComponent(
+        service.category_slug
+      )}`
+    : "/services";
 
   return (
     <>
@@ -207,11 +257,11 @@ export default function ServiceDetailPage() {
               <span>/</span>
 
               <Link
-                to="/services"
-                className="hover:text-orange"
-              >
-                Product & Services
-              </Link>
+  to={servicesBackUrl}
+  className="hover:text-orange"
+>
+  Product & Services
+</Link>
 
               <span>/</span>
 
@@ -247,12 +297,12 @@ export default function ServiceDetailPage() {
                   </Link>
 
                   <Link
-                    to="/services"
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
-                  >
-                    <ArrowLeft size={18} />
-                    Semua Layanan
-                  </Link>
+  to={servicesBackUrl}
+  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
+>
+  <ArrowLeft size={18} />
+  Kembali ke Kategori
+</Link>
                 </div>
               </div>
 

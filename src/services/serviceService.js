@@ -818,51 +818,94 @@ export async function getServiceById(
  * Mengambil detail service Published
  * berdasarkan slug.
  */
-export async function getPublishedServiceBySlug(
-  slug
-) {
-  if (!slug) {
+export async function getPublishedServiceBySlug(slug) {
+  const normalizedSlug = String(
+    slug || ""
+  ).trim();
+
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  const { data: service, error: serviceError } =
+    await supabase
+      .from("services")
+      .select(`
+        id,
+        category_id,
+        name,
+        slug,
+        short_description,
+        full_description,
+        image_url,
+        icon,
+        features,
+        sort_order,
+        is_featured,
+        status,
+        published_at,
+        seo_title,
+        seo_description,
+        created_at,
+        updated_at
+      `)
+      .eq("slug", normalizedSlug)
+      .eq("status", "published")
+      .maybeSingle();
+
+  if (serviceError) {
+    console.error(
+      "Detail layanan gagal dimuat:",
+      serviceError
+    );
+
     throw new Error(
-      "Slug layanan tidak tersedia."
+      serviceError.message ||
+        "Detail layanan gagal dimuat."
     );
   }
 
-  try {
-    const [
-      serviceResult,
-      categories,
-    ] = await Promise.all([
-      supabase
-        .from(SERVICE_TABLE)
-        .select("*")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .maybeSingle(),
-
-      getServiceCategories(),
-    ]);
-
-    if (serviceResult.error) {
-      throw serviceResult.error;
-    }
-
-    if (!serviceResult.data) {
-      return null;
-    }
-
-    const categoryMap =
-      createCategoryMap(categories);
-
-    return normalizeServiceRecord(
-      serviceResult.data,
-      categoryMap
-    );
-  } catch (error) {
-    throwServiceError(
-      error,
-      "Detail layanan gagal dimuat."
-    );
+  if (!service) {
+    return null;
   }
+
+  let category = null;
+
+  if (service.category_id) {
+    const {
+      data: categoryData,
+      error: categoryError,
+    } = await supabase
+      .from("service_categories")
+      .select(`
+        id,
+        name,
+        slug,
+        description
+      `)
+      .eq("id", service.category_id)
+      .maybeSingle();
+
+    if (categoryError) {
+      console.warn(
+        "Kategori layanan gagal dimuat:",
+        categoryError
+      );
+    } else {
+      category = categoryData;
+    }
+  }
+
+  return {
+    ...service,
+
+    category,
+    category_name:
+      category?.name || "",
+
+    category_slug:
+      category?.slug || "",
+  };
 }
 
 /*
@@ -1105,4 +1148,74 @@ export async function deleteService(
       "Layanan gagal dihapus."
     );
   }
+}
+
+export async function getActiveServiceCategories() {
+  const { data, error } = await supabase
+    .from("service_categories")
+    .select(`
+      id,
+      name,
+      slug,
+      description,
+      icon,
+      sort_order,
+      is_active
+    `)
+    .eq("is_active", true)
+    .order("sort_order", {
+      ascending: true,
+    });
+
+  if (error) {
+    console.error(
+      "Kategori layanan gagal dimuat:",
+      error
+    );
+
+    throw new Error(
+      error.message ||
+        "Kategori layanan gagal dimuat."
+    );
+  }
+
+  return data || [];
+}
+
+export async function getPublishedServicesForPublic() {
+  const { data, error } = await supabase
+    .from("services")
+    .select(`
+      id,
+      category_id,
+      name,
+      slug,
+      short_description,
+      full_description,
+      image_url,
+      icon,
+      features,
+      sort_order,
+      is_featured,
+      status,
+      published_at
+    `)
+    .eq("status", "published")
+    .order("sort_order", {
+      ascending: true,
+    });
+
+  if (error) {
+    console.error(
+      "Layanan publik gagal dimuat:",
+      error
+    );
+
+    throw new Error(
+      error.message ||
+        "Layanan publik gagal dimuat."
+    );
+  }
+
+  return data || [];
 }

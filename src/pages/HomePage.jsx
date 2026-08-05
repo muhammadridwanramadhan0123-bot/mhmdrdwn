@@ -2,18 +2,21 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
-  HeartPulse,
-  Hospital,
+  MapPin,
 } from "lucide-react";
 
-import { CTA, SectionHeading } from "../components/Common";
+import {
+  CTA,
+} from "../components/Common";
 import FeaturedPortfolioSection from "../components/FeaturedPortfolioSection";
 import FeaturedInsightSection from "../components/FeaturedInsightSection";
 import FeaturedServiceSection from "../components/FeaturedServiceSection";
+import CoreServicesSection from "../components/home/CoreServicesSection";
+
+import gedungJmt from "../assets/images/gedung.webp";
 
 import {
   stats,
-  serviceCategories,
 } from "../data/siteData";
 
 export default function HomePage() {
@@ -22,6 +25,7 @@ export default function HomePage() {
       {/* HERO */}
       <section className="hero-grid overflow-hidden bg-gradient-to-br from-white via-white to-cream">
         <div className="container-jmt grid min-h-[650px] items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr]">
+          {/* Konten kiri */}
           <div>
             <span className="inline-flex rounded-full bg-cream px-4 py-2 text-xs font-semibold text-orange">
               Indonesia’s Leading Healthcare Technology
@@ -41,18 +45,28 @@ export default function HomePage() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/services" className="btn-primary">
+              <Link
+                to="/services"
+                className="btn-primary"
+              >
                 Explore Our Solutions
                 <ArrowRight size={17} />
               </Link>
 
-              <Link to="/contact" className="btn-secondary">
+              <Link
+                to="/contact"
+                className="btn-secondary"
+              >
                 Contact Us
               </Link>
             </div>
 
             <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-xs font-medium text-slate-600">
-              {["Integrated", "Secure", "Scalable"].map((item) => (
+              {[
+                "Integrated",
+                "Secure",
+                "Scalable",
+              ].map((item) => (
                 <span
                   key={item}
                   className="flex items-center gap-2"
@@ -68,39 +82,44 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Foto gedung perusahaan */}
           <div className="relative mx-auto w-full max-w-xl">
+            {/* Elemen dekorasi */}
             <div className="absolute -left-4 top-16 h-24 w-24 rounded-3xl bg-orange/10" />
 
             <div className="absolute -right-4 bottom-10 h-32 w-32 rounded-full bg-teal/10" />
 
-            <div className="relative rounded-[2rem] bg-gradient-to-br from-ink to-teal p-8 text-white shadow-2xl">
-              <div className="grid min-h-[370px] content-between">
-                <div className="flex items-start justify-between">
-                  <div className="rounded-2xl bg-white/10 p-4">
-                    <Hospital size={46} />
-                  </div>
+            <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+              <img
+                src={gedungJmt}
+                alt="Gedung perusahaan Jasa Medika Transmedic"
+                className="h-[370px] w-full object-cover sm:h-[420px]"
+              />
 
-                  <span className="rounded-full bg-orange px-3 py-1 text-xs font-semibold">
-                    Healthcare 4.0
-                  </span>
+              {/* Overlay agar tulisan tetap jelas */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#082B3A]/90 via-[#082B3A]/20 to-transparent" />
+
+              {/* Label bagian atas */}
+              <div className="absolute left-5 top-5 rounded-full border border-white/20 bg-[#082B3A]/70 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md">
+                JMT Group Headquarters
+              </div>
+
+              {/* Informasi bagian bawah */}
+              <div className="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-orange">
+                  <MapPin size={16} />
+                  Bandung, Indonesia
                 </div>
 
-                <div>
-                  <HeartPulse
-                    size={84}
-                    className="mb-8 text-orange"
-                    strokeWidth={1.25}
-                  />
+                <h2 className="mt-3 max-w-md text-2xl font-bold leading-tight sm:text-3xl">
+                  Jasa Medika Transmedic Group
+                </h2>
 
-                  <h2 className="text-3xl font-bold">
-                    Technology that connects every point of care.
-                  </h2>
-
-                  <p className="mt-4 text-sm leading-7 text-cyan-50/75">
-                    One ecosystem for clinical services, operations,
-                    infrastructure, and people.
-                  </p>
-                </div>
+                <p className="mt-3 max-w-lg text-sm leading-6 text-white/75">
+                  Building an integrated healthcare ecosystem through
+                  technology, infrastructure, consulting, and professional
+                  services.
+                </p>
               </div>
             </div>
           </div>
@@ -127,53 +146,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CORE SERVICES */}
-      <section className="container-jmt py-20">
-        <SectionHeading
-          kicker="Our Core Services"
-          title="Solusi menyeluruh untuk ekosistem kesehatan"
-          description="Dari sistem informasi hingga pengembangan talenta, seluruh solusi dirancang untuk mempercepat transformasi operasional Anda."
-          center
-        />
-
-        <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {serviceCategories.map(
-            ({
-              id,
-              name,
-              short,
-              icon: Icon,
-            }) => (
-              <Link
-                to={`/services#${id}`}
-                key={id}
-                className="group card p-7 transition hover:-translate-y-1 hover:border-orange/40"
-              >
-                <div className="mb-5 inline-flex rounded-xl bg-cream p-3 text-orange">
-                  <Icon size={28} />
-                </div>
-
-                <h3 className="font-semibold">
-                  {name}
-                </h3>
-
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  {short}
-                </p>
-
-                <span className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-orange">
-                  Learn More
-
-                  <ArrowRight
-                    size={14}
-                    className="transition group-hover:translate-x-1"
-                  />
-                </span>
-              </Link>
-            )
-          )}
-        </div>
-      </section>
+      <CoreServicesSection />
 
       {/* FEATURED SERVICES */}
       <FeaturedServiceSection />
