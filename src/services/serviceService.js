@@ -1219,3 +1219,1049 @@ export async function getPublishedServicesForPublic() {
 
   return data || [];
 }
+/*
+ * ======================================================
+ * PUBLIC SERVICE FEATURES
+ * ======================================================
+ */
+
+/*
+ * Mengambil semua fitur published berdasarkan
+ * slug layanan induknya.
+ *
+ * Contoh:
+ * serviceSlug = "transhealthcare-ecosystem"
+ */
+export async function getPublishedServiceFeaturesByServiceSlug(
+  serviceSlug
+) {
+  const normalizedServiceSlug = String(
+    serviceSlug || ""
+  ).trim();
+
+  if (!normalizedServiceSlug) {
+    return [];
+  }
+
+  /*
+   * Cari layanan induk terlebih dahulu.
+   * Query dibuat terpisah agar tidak bergantung
+   * pada nama relasi otomatis Supabase.
+   */
+  const {
+    data: parentService,
+    error: serviceError,
+  } = await supabase
+    .from("services")
+    .select("*")
+    .eq("slug", normalizedServiceSlug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (serviceError) {
+    console.error(
+      "Layanan induk fitur gagal dimuat:",
+      serviceError
+    );
+
+    throw new Error(
+      serviceError.message ||
+        "Layanan induk fitur gagal dimuat."
+    );
+  }
+
+  if (!parentService) {
+    return [];
+  }
+
+  const {
+    data: features,
+    error: featureError,
+  } = await supabase
+    .from("service_features")
+    .select("*")
+    .eq(
+      "service_id",
+      parentService.id
+    )
+    .eq("status", "published")
+    .order("sort_order", {
+      ascending: true,
+    })
+    .order("name", {
+      ascending: true,
+    });
+
+  if (featureError) {
+    console.error(
+      "Daftar fitur layanan gagal dimuat:",
+      featureError
+    );
+
+    throw new Error(
+      featureError.message ||
+        "Daftar fitur layanan gagal dimuat."
+    );
+  }
+
+  return (features || []).map(
+    (feature) => ({
+      ...feature,
+
+      name: String(
+        feature?.name || ""
+      ).trim(),
+
+      slug: String(
+        feature?.slug || ""
+      ).trim(),
+
+      short_description: String(
+        feature?.short_description || ""
+      ).trim(),
+
+      full_description: String(
+        feature?.full_description || ""
+      ).trim(),
+
+      image_url: String(
+        feature?.image_url || ""
+      ).trim(),
+
+      sort_order:
+        Number(
+          feature?.sort_order
+        ) || 0,
+
+      service: parentService,
+
+      service_name:
+        parentService.name,
+
+      service_slug:
+        parentService.slug,
+    })
+  );
+}
+
+/*
+ * Mengambil satu detail fitur published
+ * berdasarkan slug layanan dan slug fitur.
+ *
+ * Contoh URL:
+ * /services/transhealthcare-ecosystem/features/transeca-x
+ */
+export async function getPublishedServiceFeatureBySlug(
+  serviceSlug,
+  featureSlug
+) {
+  const normalizedServiceSlug = String(
+    serviceSlug || ""
+  ).trim();
+
+  const normalizedFeatureSlug = String(
+    featureSlug || ""
+  ).trim();
+
+  if (
+    !normalizedServiceSlug ||
+    !normalizedFeatureSlug
+  ) {
+    return null;
+  }
+
+  /*
+   * Tahap pertama:
+   * mencari layanan induk yang published.
+   */
+  const {
+    data: parentService,
+    error: serviceError,
+  } = await supabase
+    .from("services")
+    .select("*")
+    .eq("slug", normalizedServiceSlug)
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (serviceError) {
+    console.error(
+      "Layanan induk detail fitur gagal dimuat:",
+      serviceError
+    );
+
+    throw new Error(
+      serviceError.message ||
+        "Layanan induk detail fitur gagal dimuat."
+    );
+  }
+
+  if (!parentService) {
+    return null;
+  }
+
+  /*
+   * Tahap kedua:
+   * mencari fitur yang menjadi milik
+   * layanan induk tersebut.
+   */
+  const {
+    data: feature,
+    error: featureError,
+  } = await supabase
+    .from("service_features")
+    .select("*")
+    .eq(
+      "service_id",
+      parentService.id
+    )
+    .eq(
+      "slug",
+      normalizedFeatureSlug
+    )
+    .eq("status", "published")
+    .maybeSingle();
+
+  if (featureError) {
+    console.error(
+      "Detail fitur layanan gagal dimuat:",
+      featureError
+    );
+
+    throw new Error(
+      featureError.message ||
+        "Detail fitur layanan gagal dimuat."
+    );
+  }
+
+  if (!feature) {
+    return null;
+  }
+
+  return {
+    ...feature,
+
+    name: String(
+      feature.name || ""
+    ).trim(),
+
+    slug: String(
+      feature.slug || ""
+    ).trim(),
+
+    short_description: String(
+      feature.short_description || ""
+    ).trim(),
+
+    full_description: String(
+      feature.full_description || ""
+    ).trim(),
+
+    image_url: String(
+      feature.image_url || ""
+    ).trim(),
+
+    sort_order:
+      Number(feature.sort_order) || 0,
+
+    /*
+     * Informasi layanan induk disertakan
+     * agar dapat digunakan oleh breadcrumb,
+     * tombol kembali, dan judul halaman.
+     */
+    service: parentService,
+
+    service_id:
+      parentService.id,
+
+    service_name:
+      parentService.name,
+
+    service_slug:
+      parentService.slug,
+  };
+}
+/*
+ * ======================================================
+ * ADMIN SERVICE FEATURES
+ * ======================================================
+ *
+ * Seluruh fungsi pada bagian ini khusus untuk
+ * pengelolaan Detail Fitur & Cakupan di dashboard.
+ *
+ * Data disimpan pada:
+ * public.service_features
+ *
+ * Gambar disimpan pada:
+ * service-images/features/
+ */
+
+const SERVICE_FEATURE_TABLE =
+  "service_features";
+
+/*
+ * Membersihkan slug fitur.
+ *
+ * Contoh:
+ * Enterprise Resource Planning (ERP)
+ * menjadi:
+ * enterprise-resource-planning-erp
+ */
+function normalizeServiceFeatureSlug(
+  value
+) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/*
+ * Menormalisasi data service feature.
+ */
+function normalizeServiceFeatureRecord(
+  feature
+) {
+  if (!feature) {
+    return null;
+  }
+
+  return {
+    ...feature,
+
+    service_id: String(
+      feature.service_id || ""
+    ).trim(),
+
+    name: String(
+      feature.name || ""
+    ).trim(),
+
+    slug: String(
+      feature.slug || ""
+    ).trim(),
+
+    short_description: String(
+      feature.short_description || ""
+    ).trim(),
+
+    full_description: String(
+      feature.full_description || ""
+    ).trim(),
+
+    image_url: String(
+      feature.image_url || ""
+    ).trim(),
+
+    sort_order:
+      Number(feature.sort_order) || 0,
+
+    status: normalizeStatus(
+      feature.status
+    ),
+  };
+}
+
+/*
+ * Membuat path khusus gambar fitur.
+ *
+ * Contoh:
+ * features/1720000000-uuid-gambar.webp
+ */
+function createServiceFeatureImagePath(
+  file
+) {
+  const safeFileName =
+    sanitizeFileName(
+      file?.name ||
+        "service-feature-image"
+    );
+
+  return `features/${Date.now()}-${createUniqueId()}-${safeFileName}`;
+}
+
+/*
+ * Membentuk payload untuk insert dan
+ * update service_features.
+ */
+function createServiceFeaturePayload(
+  values = {},
+  {
+    serviceId = "",
+    imageUrl = "",
+    includeServiceId = false,
+    includeImage = true,
+  } = {}
+) {
+  const name = String(
+    values.name || ""
+  ).trim();
+
+  if (!name) {
+    throw new Error(
+      "Nama fitur wajib diisi."
+    );
+  }
+
+  const slug =
+    normalizeServiceFeatureSlug(
+      values.slug
+    ) ||
+    normalizeServiceFeatureSlug(
+      name
+    );
+
+  if (!slug) {
+    throw new Error(
+      "Slug fitur tidak valid."
+    );
+  }
+
+  const rawSortOrder =
+    Number(
+      values.sort_order ?? 0
+    );
+
+  if (
+    !Number.isFinite(
+      rawSortOrder
+    ) ||
+    rawSortOrder < 0
+  ) {
+    throw new Error(
+      "Urutan tampil minimal bernilai 0."
+    );
+  }
+
+  const payload = {
+    name,
+    slug,
+
+    short_description: String(
+      values.short_description || ""
+    ).trim(),
+
+    full_description: String(
+      values.full_description || ""
+    ).trim(),
+
+    sort_order: Math.trunc(
+      rawSortOrder
+    ),
+
+    status: normalizeStatus(
+      values.status
+    ),
+
+    updated_at:
+      new Date().toISOString(),
+  };
+
+  if (includeServiceId) {
+    const normalizedServiceId =
+      String(
+        serviceId || ""
+      ).trim();
+
+    if (!normalizedServiceId) {
+      throw new Error(
+        "ID layanan induk tidak tersedia."
+      );
+    }
+
+    payload.service_id =
+      normalizedServiceId;
+  }
+
+  if (includeImage) {
+    payload.image_url =
+      String(imageUrl || "").trim() ||
+      null;
+  }
+
+  return payload;
+}
+
+/*
+ * Penanganan error khusus service feature.
+ *
+ * Fungsi terpisah digunakan agar pesan error
+ * layanan utama yang sudah berjalan tidak berubah.
+ */
+function throwServiceFeatureError(
+  error,
+  fallbackMessage
+) {
+  console.error(
+    fallbackMessage,
+    error
+  );
+
+  if (error?.code === "23505") {
+    throw new Error(
+      "Slug fitur sudah digunakan. Gunakan slug fitur yang berbeda."
+    );
+  }
+
+  if (error?.code === "23503") {
+    throw new Error(
+      "Layanan induk tidak valid atau sudah tidak tersedia."
+    );
+  }
+
+  if (error?.code === "23514") {
+    throw new Error(
+      "Data fitur tidak sesuai aturan database. Periksa status dan urutan tampil."
+    );
+  }
+
+  if (error?.code === "23502") {
+    throw new Error(
+      "Terdapat data wajib fitur yang belum diisi."
+    );
+  }
+
+  if (error?.code === "42501") {
+    throw new Error(
+      "Akun ini tidak memiliki izin untuk mengelola detail fitur."
+    );
+  }
+
+  const message = String(
+    error?.message || ""
+  ).toLowerCase();
+
+  if (
+    message.includes(
+      "row-level security"
+    ) ||
+    message.includes(
+      "violates row-level security"
+    )
+  ) {
+    throw new Error(
+      "Tindakan ditolak oleh policy RLS service_features."
+    );
+  }
+
+  throw new Error(
+    error?.message ||
+      fallbackMessage
+  );
+}
+
+/*
+ * Mengunggah gambar detail fitur.
+ *
+ * Menggunakan bucket yang sama dengan
+ * gambar layanan utama:
+ * service-images
+ *
+ * Tetapi disimpan pada folder:
+ * features/
+ */
+export async function uploadServiceFeatureImage(
+  file
+) {
+  validateServiceImage(file);
+
+  if (!file) {
+    throw new Error(
+      "File gambar fitur tidak tersedia."
+    );
+  }
+
+  const filePath =
+    createServiceFeatureImagePath(
+      file
+    );
+
+  const { error: uploadError } =
+    await supabase.storage
+      .from(SERVICE_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+
+  if (uploadError) {
+    throwServiceFeatureError(
+      uploadError,
+      "Gambar fitur gagal diunggah."
+    );
+  }
+
+  const { data: publicUrlData } =
+    supabase.storage
+      .from(SERVICE_BUCKET)
+      .getPublicUrl(filePath);
+
+  const publicUrl =
+    publicUrlData?.publicUrl || "";
+
+  if (!publicUrl) {
+    await supabase.storage
+      .from(SERVICE_BUCKET)
+      .remove([filePath]);
+
+    throw new Error(
+      "Public URL gambar fitur gagal dibuat."
+    );
+  }
+
+  return {
+    filePath,
+    publicUrl,
+  };
+}
+
+/*
+ * Mengambil seluruh detail fitur milik
+ * satu layanan untuk halaman admin.
+ *
+ * Berbeda dengan fungsi publik:
+ * fungsi ini mengambil semua status,
+ * termasuk draft dan archived.
+ */
+export async function getAdminServiceFeatures(
+  serviceId
+) {
+  const normalizedServiceId =
+    String(serviceId || "").trim();
+
+  if (!normalizedServiceId) {
+    return [];
+  }
+
+  const { data, error } =
+    await supabase
+      .from(SERVICE_FEATURE_TABLE)
+      .select("*")
+      .eq(
+        "service_id",
+        normalizedServiceId
+      )
+      .order("sort_order", {
+        ascending: true,
+      })
+      .order("created_at", {
+        ascending: true,
+      });
+
+  if (error) {
+    throwServiceFeatureError(
+      error,
+      "Daftar detail fitur gagal dimuat."
+    );
+  }
+
+  return (data || []).map(
+    normalizeServiceFeatureRecord
+  );
+}
+
+/*
+ * Mengambil satu detail fitur berdasarkan ID.
+ *
+ * Digunakan untuk proses edit dan penghapusan.
+ */
+export async function getServiceFeatureById(
+  featureId
+) {
+  const normalizedFeatureId =
+    String(
+      featureId || ""
+    ).trim();
+
+  if (!normalizedFeatureId) {
+    throw new Error(
+      "ID fitur tidak tersedia."
+    );
+  }
+
+  const { data, error } =
+    await supabase
+      .from(SERVICE_FEATURE_TABLE)
+      .select("*")
+      .eq(
+        "id",
+        normalizedFeatureId
+      )
+      .maybeSingle();
+
+  if (error) {
+    throwServiceFeatureError(
+      error,
+      "Detail fitur gagal dimuat."
+    );
+  }
+
+  return normalizeServiceFeatureRecord(
+    data
+  );
+}
+
+/*
+ * Menambahkan detail fitur baru.
+ *
+ * serviceId otomatis berasal dari layanan
+ * yang sedang diedit.
+ *
+ * imageFile bersifat opsional.
+ */
+export async function createServiceFeature(
+  serviceId,
+  values = {},
+  imageFile = null
+) {
+  const normalizedServiceId =
+    String(serviceId || "").trim();
+
+  if (!normalizedServiceId) {
+    throw new Error(
+      "ID layanan induk tidak tersedia."
+    );
+  }
+
+  let uploadedImage = null;
+
+  try {
+    let nextImageUrl = String(
+      values.image_url || ""
+    ).trim();
+
+    if (imageFile) {
+      uploadedImage =
+        await uploadServiceFeatureImage(
+          imageFile
+        );
+
+      nextImageUrl =
+        uploadedImage.publicUrl;
+    }
+
+    const payload =
+      createServiceFeaturePayload(
+        values,
+        {
+          serviceId:
+            normalizedServiceId,
+
+          imageUrl:
+            nextImageUrl,
+
+          includeServiceId: true,
+
+          includeImage: true,
+        }
+      );
+
+    const { data, error } =
+      await supabase
+        .from(
+          SERVICE_FEATURE_TABLE
+        )
+        .insert(payload)
+        .select("*")
+        .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return normalizeServiceFeatureRecord(
+      data
+    );
+  } catch (error) {
+    /*
+     * Hapus gambar baru jika proses insert
+     * ke database gagal.
+     */
+    if (uploadedImage?.filePath) {
+      try {
+        await deleteServiceImage(
+          uploadedImage.filePath
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Gambar fitur sementara gagal dibersihkan:",
+          cleanupError
+        );
+      }
+    }
+
+    throwServiceFeatureError(
+      error,
+      "Detail fitur gagal ditambahkan."
+    );
+  }
+}
+
+/*
+ * Memperbarui detail fitur.
+ *
+ * Mendukung:
+ * - edit data;
+ * - upload gambar baru;
+ * - mempertahankan gambar lama;
+ * - menghapus gambar lama.
+ *
+ * Untuk menghapus gambar, kirim:
+ * image_url: ""
+ */
+export async function updateServiceFeature(
+  featureId,
+  values = {},
+  imageFile = null
+) {
+  const normalizedFeatureId =
+    String(
+      featureId || ""
+    ).trim();
+
+  if (!normalizedFeatureId) {
+    throw new Error(
+      "ID fitur tidak tersedia."
+    );
+  }
+
+  let uploadedImage = null;
+
+  try {
+    const currentFeature =
+      await getServiceFeatureById(
+        normalizedFeatureId
+      );
+
+    if (!currentFeature) {
+      throw new Error(
+        "Detail fitur tidak ditemukan."
+      );
+    }
+
+    const mergedValues = {
+      ...currentFeature,
+      ...values,
+    };
+
+    let nextImageUrl =
+      currentFeature.image_url ||
+      "";
+
+    let includeImage = false;
+
+    /*
+     * Jika ada file baru, ganti gambar.
+     */
+    if (imageFile) {
+      uploadedImage =
+        await uploadServiceFeatureImage(
+          imageFile
+        );
+
+      nextImageUrl =
+        uploadedImage.publicUrl;
+
+      includeImage = true;
+    } else if (
+      Object.prototype.hasOwnProperty.call(
+        values,
+        "image_url"
+      )
+    ) {
+      /*
+       * Jika image_url dikirim secara eksplisit,
+       * gunakan nilainya.
+       *
+       * image_url kosong berarti gambar dihapus.
+       */
+      nextImageUrl = String(
+        values.image_url || ""
+      ).trim();
+
+      includeImage =
+        nextImageUrl !==
+        currentFeature.image_url;
+    }
+
+    const payload =
+      createServiceFeaturePayload(
+        mergedValues,
+        {
+          imageUrl:
+            nextImageUrl,
+
+          includeServiceId: false,
+
+          includeImage,
+        }
+      );
+
+    const { data, error } =
+      await supabase
+        .from(
+          SERVICE_FEATURE_TABLE
+        )
+        .update(payload)
+        .eq(
+          "id",
+          normalizedFeatureId
+        )
+        .select("*")
+        .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error(
+        "Detail fitur tidak ditemukan atau akun tidak memiliki izin untuk mengedit."
+      );
+    }
+
+    const updatedFeature =
+      normalizeServiceFeatureRecord(
+        data
+      );
+
+    /*
+     * Hapus gambar lama setelah update
+     * database berhasil.
+     */
+    if (
+      includeImage &&
+      currentFeature.image_url &&
+      currentFeature.image_url !==
+        updatedFeature.image_url
+    ) {
+      try {
+        await deleteServiceImage(
+          currentFeature.image_url
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Detail fitur berhasil diperbarui, tetapi gambar lama gagal dihapus:",
+          cleanupError
+        );
+      }
+    }
+
+    return updatedFeature;
+  } catch (error) {
+    /*
+     * Hapus gambar baru jika update database
+     * gagal dilakukan.
+     */
+    if (uploadedImage?.filePath) {
+      try {
+        await deleteServiceImage(
+          uploadedImage.filePath
+        );
+      } catch (cleanupError) {
+        console.error(
+          "Gambar fitur baru gagal dibersihkan:",
+          cleanupError
+        );
+      }
+    }
+
+    throwServiceFeatureError(
+      error,
+      "Detail fitur gagal diperbarui."
+    );
+  }
+}
+
+/*
+ * Menghapus detail fitur beserta gambar.
+ *
+ * Policy database menentukan bahwa hanya
+ * admin yang dapat menghapus.
+ */
+export async function deleteServiceFeature(
+  featureId
+) {
+  const normalizedFeatureId =
+    String(
+      featureId || ""
+    ).trim();
+
+  if (!normalizedFeatureId) {
+    throw new Error(
+      "ID fitur tidak tersedia."
+    );
+  }
+
+  try {
+    const currentFeature =
+      await getServiceFeatureById(
+        normalizedFeatureId
+      );
+
+    if (!currentFeature) {
+      throw new Error(
+        "Detail fitur tidak ditemukan."
+      );
+    }
+
+    const { data, error } =
+      await supabase
+        .from(
+          SERVICE_FEATURE_TABLE
+        )
+        .delete()
+        .eq(
+          "id",
+          normalizedFeatureId
+        )
+        .select("id")
+        .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error(
+        "Detail fitur tidak ditemukan atau hanya admin yang dapat menghapus."
+      );
+    }
+
+    let imageDeleted = false;
+
+    if (currentFeature.image_url) {
+      try {
+        imageDeleted =
+          await deleteServiceImage(
+            currentFeature.image_url
+          );
+      } catch (storageError) {
+        console.error(
+          "Detail fitur terhapus, tetapi gambarnya gagal dihapus:",
+          storageError
+        );
+      }
+    }
+
+    return {
+      deletedFeature:
+        currentFeature,
+
+      imageDeleted,
+    };
+  } catch (error) {
+    throwServiceFeatureError(
+      error,
+      "Detail fitur gagal dihapus."
+    );
+  }
+}

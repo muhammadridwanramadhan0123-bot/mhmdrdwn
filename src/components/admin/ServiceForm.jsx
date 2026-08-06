@@ -15,7 +15,8 @@ import {
   normalizeServiceFeatures,
 } from "../../services/serviceService";
 
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const MAX_IMAGE_SIZE =
+  2 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
@@ -56,22 +57,39 @@ function formatDateTimeLocal(value) {
 
 function createInitialValues(initialData) {
   return {
-    name: initialData?.name || "",
-    slug: initialData?.slug || "",
+    name:
+      initialData?.name || "",
+
+    slug:
+      initialData?.slug || "",
+
     category_id:
       initialData?.category_id || "",
 
     short_description:
-      initialData?.short_description || "",
+      initialData?.short_description ||
+      "",
 
     full_description:
-      initialData?.full_description || "",
+      initialData?.full_description ||
+      "",
 
-    icon: initialData?.icon || "",
+    icon:
+      initialData?.icon || "",
 
-    features: normalizeServiceFeatures(
-      initialData?.features
-    ).join("\n"),
+    /*
+     * Data features lama tetap dipertahankan
+     * agar tidak terhapus ketika Service
+     * diperbarui.
+     *
+     * Field ini tidak lagi ditampilkan
+     * pada form karena detail fitur sekarang
+     * dikelola melalui service_features.
+     */
+    features:
+      normalizeServiceFeatures(
+        initialData?.features
+      ),
 
     display_order:
       initialData?.display_order ??
@@ -79,7 +97,8 @@ function createInitialValues(initialData) {
       0,
 
     status:
-      initialData?.status || "draft",
+      initialData?.status ||
+      "draft",
 
     is_featured: Boolean(
       initialData?.is_featured
@@ -94,7 +113,8 @@ function createInitialValues(initialData) {
       initialData?.seo_title || "",
 
     seo_description:
-      initialData?.seo_description || "",
+      initialData?.seo_description ||
+      "",
   };
 }
 
@@ -104,32 +124,49 @@ export default function ServiceForm({
   loading = false,
   submitLabel = "Simpan Service",
 }) {
-  const [values, setValues] = useState(() =>
-    createInitialValues(initialData)
-  );
-
-  const [categories, setCategories] =
-    useState([]);
-
-  const [loadingCategories, setLoadingCategories] =
-    useState(true);
-
-  const [categoryError, setCategoryError] =
-    useState("");
-
-  const [imageFile, setImageFile] =
-    useState(null);
-
-  const [imagePreview, setImagePreview] =
-    useState(
-      initialData?.image_url || ""
+  const [values, setValues] =
+    useState(() =>
+      createInitialValues(initialData)
     );
 
-  const [slugEdited, setSlugEdited] =
-    useState(Boolean(initialData?.slug));
+  const [
+    categories,
+    setCategories,
+  ] = useState([]);
 
-  const [formError, setFormError] =
-    useState("");
+  const [
+    loadingCategories,
+    setLoadingCategories,
+  ] = useState(true);
+
+  const [
+    categoryError,
+    setCategoryError,
+  ] = useState("");
+
+  const [
+    imageFile,
+    setImageFile,
+  ] = useState(null);
+
+  const [
+    imagePreview,
+    setImagePreview,
+  ] = useState(
+    initialData?.image_url || ""
+  );
+
+  const [
+    slugEdited,
+    setSlugEdited,
+  ] = useState(
+    Boolean(initialData?.slug)
+  );
+
+  const [
+    formError,
+    setFormError,
+  ] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -145,11 +182,15 @@ export default function ServiceForm({
               Boolean(initialData),
           });
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         setCategories(data);
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         console.error(
           "Kategori service gagal dimuat:",
@@ -208,7 +249,9 @@ export default function ServiceForm({
     setImagePreview(objectUrl);
 
     return () => {
-      URL.revokeObjectURL(objectUrl);
+      URL.revokeObjectURL(
+        objectUrl
+      );
     };
   }, [
     imageFile,
@@ -224,22 +267,28 @@ export default function ServiceForm({
     } = event.target;
 
     if (type === "checkbox") {
-      setValues((currentValues) => ({
-        ...currentValues,
-        [name]: checked,
-      }));
+      setValues(
+        (currentValues) => ({
+          ...currentValues,
+          [name]: checked,
+        })
+      );
 
       return;
     }
 
     if (name === "name") {
-      setValues((currentValues) => ({
-        ...currentValues,
-        name: value,
-        slug: slugEdited
-          ? currentValues.slug
-          : createSlug(value),
-      }));
+      setValues(
+        (currentValues) => ({
+          ...currentValues,
+
+          name: value,
+
+          slug: slugEdited
+            ? currentValues.slug
+            : createSlug(value),
+        })
+      );
 
       return;
     }
@@ -247,23 +296,30 @@ export default function ServiceForm({
     if (name === "slug") {
       setSlugEdited(true);
 
-      setValues((currentValues) => ({
-        ...currentValues,
-        slug: createSlug(value),
-      }));
+      setValues(
+        (currentValues) => ({
+          ...currentValues,
+          slug: createSlug(value),
+        })
+      );
 
       return;
     }
 
-    setValues((currentValues) => ({
-      ...currentValues,
-      [name]: value,
-    }));
+    setValues(
+      (currentValues) => ({
+        ...currentValues,
+        [name]: value,
+      })
+    );
   }
 
-  function handleImageChange(event) {
+  function handleImageChange(
+    event
+  ) {
     const selectedFile =
-      event.target.files?.[0] || null;
+      event.target.files?.[0] ||
+      null;
 
     setFormError("");
 
@@ -282,6 +338,7 @@ export default function ServiceForm({
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -294,6 +351,7 @@ export default function ServiceForm({
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -320,7 +378,9 @@ export default function ServiceForm({
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (loading) return;
+    if (loading) {
+      return;
+    }
 
     setFormError("");
 
@@ -328,6 +388,7 @@ export default function ServiceForm({
       setFormError(
         "Nama layanan wajib diisi."
       );
+
       return;
     }
 
@@ -335,6 +396,7 @@ export default function ServiceForm({
       setFormError(
         "Slug layanan wajib diisi."
       );
+
       return;
     }
 
@@ -342,6 +404,7 @@ export default function ServiceForm({
       setFormError(
         "Kategori layanan wajib dipilih."
       );
+
       return;
     }
 
@@ -351,6 +414,7 @@ export default function ServiceForm({
       setFormError(
         "Deskripsi singkat wajib diisi."
       );
+
       return;
     }
 
@@ -360,6 +424,7 @@ export default function ServiceForm({
       setFormError(
         "Deskripsi lengkap wajib diisi."
       );
+
       return;
     }
 
@@ -369,10 +434,14 @@ export default function ServiceForm({
       setFormError(
         "Fungsi penyimpanan tidak tersedia."
       );
+
       return;
     }
 
-    await onSubmit(values, imageFile);
+    await onSubmit(
+      values,
+      imageFile
+    );
   }
 
   return (
@@ -380,7 +449,8 @@ export default function ServiceForm({
       onSubmit={handleSubmit}
       className="space-y-6"
     >
-      {(formError || categoryError) && (
+      {(formError ||
+        categoryError) && (
         <div
           role="alert"
           className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4"
@@ -392,11 +462,13 @@ export default function ServiceForm({
 
           <div>
             <p className="font-semibold text-red-700">
-              Form belum dapat disimpan
+              Form belum dapat
+              disimpan
             </p>
 
             <p className="mt-1 text-sm leading-6 text-red-600">
-              {formError || categoryError}
+              {formError ||
+                categoryError}
             </p>
           </div>
         </div>
@@ -409,8 +481,9 @@ export default function ServiceForm({
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Masukkan nama, slug, kategori,
-          dan deskripsi layanan.
+          Masukkan nama, slug,
+          kategori, dan deskripsi
+          layanan.
         </p>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -438,7 +511,8 @@ export default function ServiceForm({
             />
 
             <p className="mt-2 text-right text-xs text-slate-400">
-              {values.name.length}/180
+              {values.name.length}
+              /180
             </p>
           </div>
 
@@ -486,7 +560,9 @@ export default function ServiceForm({
             <select
               id="service-category"
               name="category_id"
-              value={values.category_id}
+              value={
+                values.category_id
+              }
               onChange={handleChange}
               disabled={
                 loading ||
@@ -503,10 +579,15 @@ export default function ServiceForm({
               {categories.map(
                 (category) => (
                   <option
-                    key={category.id}
-                    value={category.id}
+                    key={
+                      category.id
+                    }
+                    value={
+                      category.id
+                    }
                   >
                     {category.name}
+
                     {!category.is_active
                       ? " (Tidak aktif)"
                       : ""}
@@ -543,7 +624,8 @@ export default function ServiceForm({
 
             <p className="mt-2 text-right text-xs text-slate-400">
               {
-                values.short_description
+                values
+                  .short_description
                   .length
               }
               /300
@@ -577,43 +659,19 @@ export default function ServiceForm({
         </div>
       </section>
 
-      {/* Fitur dan tampilan */}
+      {/* Tampilan layanan */}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-bold text-[#082B3A]">
-          Fitur dan Tampilan
+          Tampilan Layanan
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Masukkan daftar fitur satu fitur
-          pada setiap baris.
+          Atur icon dan urutan
+          tampilan layanan pada
+          halaman publik.
         </p>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label
-              htmlFor="service-features"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Fitur Layanan
-            </label>
-
-            <textarea
-              id="service-features"
-              name="features"
-              value={values.features}
-              onChange={handleChange}
-              rows={8}
-              disabled={loading}
-              placeholder={`Hospital Information System\nElectronic Medical Record\nManagement Dashboard`}
-              className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              Data akan disimpan sebagai array
-              JSON pada kolom features.
-            </p>
-          </div>
-
           <div>
             <label
               htmlFor="service-icon"
@@ -632,6 +690,12 @@ export default function ServiceForm({
               placeholder="Contoh: Stethoscope"
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             />
+
+            <p className="mt-2 text-xs leading-5 text-slate-400">
+              Gunakan nama icon yang
+              didukung oleh tampilan
+              website.
+            </p>
           </div>
 
           <div>
@@ -648,14 +712,17 @@ export default function ServiceForm({
               type="number"
               min="0"
               step="1"
-              value={values.display_order}
+              value={
+                values.display_order
+              }
               onChange={handleChange}
               disabled={loading}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
             />
 
             <p className="mt-2 text-xs text-slate-400">
-              Angka terkecil tampil lebih awal.
+              Angka terkecil tampil
+              lebih awal.
             </p>
           </div>
         </div>
@@ -668,8 +735,8 @@ export default function ServiceForm({
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Gunakan JPG, PNG, atau WebP,
-          maksimal 2 MB.
+          Gunakan JPG, PNG, atau
+          WebP, maksimal 2 MB.
         </p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -688,7 +755,8 @@ export default function ServiceForm({
               </span>
 
               <span className="mt-2 text-xs text-slate-500">
-                Rekomendasi rasio 16:9
+                Rekomendasi rasio
+                16:9
               </span>
             </label>
 
@@ -696,7 +764,9 @@ export default function ServiceForm({
               id="service-image"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={handleImageChange}
+              onChange={
+                handleImageChange
+              }
               disabled={loading}
               className="sr-only"
             />
@@ -813,7 +883,9 @@ export default function ServiceForm({
               id="service-published-at"
               name="published_at"
               type="datetime-local"
-              value={values.published_at}
+              value={
+                values.published_at
+              }
               onChange={handleChange}
               disabled={loading}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
@@ -839,8 +911,9 @@ export default function ServiceForm({
                 </span>
 
                 <span className="mt-1 block text-xs leading-5 text-slate-500">
-                  Tampilkan layanan ini sebagai
-                  layanan unggulan di homepage.
+                  Tampilkan layanan ini
+                  sebagai layanan unggulan
+                  di homepage.
                 </span>
               </span>
             </label>
@@ -858,7 +931,9 @@ export default function ServiceForm({
               id="service-seo-title"
               name="seo_title"
               type="text"
-              value={values.seo_title}
+              value={
+                values.seo_title
+              }
               onChange={handleChange}
               maxLength={180}
               disabled={loading}
@@ -908,11 +983,13 @@ export default function ServiceForm({
                 size={18}
                 className="animate-spin"
               />
+
               Menyimpan...
             </>
           ) : (
             <>
               <Save size={18} />
+
               {submitLabel}
             </>
           )}

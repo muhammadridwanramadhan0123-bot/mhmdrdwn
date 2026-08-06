@@ -39,6 +39,8 @@ import {
   getActiveCertifications,
 } from "../../services/companyCredentialService";
 
+import gedungPerusahaan from "../../assets/images/gedung.webp";
+
 /*
  * Informasi bidang usaha mengikuti
  * struktur website JMT sebelumnya.
@@ -501,49 +503,23 @@ export default function CompanyAboutPage() {
 
       {/* Tentang JMT */}
       <section className="container-jmt grid gap-12 py-20 lg:grid-cols-2 lg:items-center">
-        <div className="relative min-h-[480px] overflow-hidden rounded-[2rem] bg-gradient-to-br from-ink via-[#0A4053] to-teal p-8 text-white shadow-xl md:p-12">
-          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full border border-white/10" />
+        <div className="relative min-h-[480px] overflow-hidden rounded-[2rem] shadow-xl">
+  <img
+    src={gedungPerusahaan}
+    alt="Gedung perusahaan Jasa Medika Transmedic"
+    className="absolute inset-0 h-full w-full object-cover"
+  />
 
-          <div className="absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-orange/10 blur-2xl" />
+  <div className="absolute inset-0 bg-gradient-to-t from-[#082B3A]/88 via-[#082B3A]/45 to-[#082B3A]/10" />
 
-          <div className="relative">
-            {profile?.logo_url ? (
-              <div className="inline-flex rounded-2xl bg-white p-4 shadow-lg">
-                <img
-                  src={profile.logo_url}
-                  alt={companyName}
-                  className="h-14 max-w-48 object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange text-xl font-bold">
-                JMT
-              </div>
-            )}
+  <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
 
-            <p className="mt-20 text-xs font-bold uppercase tracking-[0.2em] text-white/60">
-              Integrated Healthcare Solutions
-            </p>
-
-            <p className="mt-5 max-w-xl text-3xl font-bold leading-tight md:text-4xl">
-              More than technology. We build a
-              connected healthcare ecosystem.
-            </p>
-
-            <div className="mt-10 flex items-center gap-3 border-t border-white/10 pt-6">
-              <CheckCircle2
-                size={19}
-                className="shrink-0 text-orange"
-              />
-
-              <p className="text-sm leading-6 text-white/70">
-                Inovasi, kolaborasi, dan layanan
-                berkelanjutan untuk fasilitas
-                kesehatan Indonesia.
-              </p>
-            </div>
-          </div>
-        </div>
+  <div className="relative flex h-full flex-col justify-end p-8 text-white md:p-12">
+    <span className="inline-flex w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
+      Jasa Medika Transmedic
+    </span>
+  </div>
+</div>
 
         <div>
           <SectionHeading

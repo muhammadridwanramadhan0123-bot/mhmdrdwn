@@ -210,10 +210,10 @@ const periodOptions = [
     end: 2020,
   },
   {
-    value: "2021-2023",
-    label: "2021–2023",
+    value: "2021-2025",
+    label: "2021–2025",
     start: 2021,
-    end: 2023,
+    end: 2025,
   },
 ];
 
@@ -730,97 +730,75 @@ export default function CompanyMilestonePage() {
           ) : (
             <>
               {/* Timeline desktop */}
-              <div className="relative mt-16 hidden lg:block">
-                {timelineRows.map(
-                  (
-                    row,
-                    rowIndex
-                  ) => {
-                    const hasNextRow =
-                      rowIndex <
-                      timelineRows.length -
-                        1;
+<div className="relative mt-16 hidden lg:block">
+  {timelineRows.map((row, rowIndex) => {
+    const hasNextRow =
+      rowIndex < timelineRows.length - 1;
 
-                    const connectorRight =
-                      rowIndex % 2 === 0;
+    const connectorRight =
+      rowIndex % 2 === 0;
 
-                    return (
-                      <div
-                        key={`timeline-row-${rowIndex}`}
-                        className="relative h-[320px]"
-                      >
-                        {/* Garis horizontal */}
-                        <div className="pointer-events-none absolute left-[16.6667%] right-[16.6667%] top-24 h-px bg-[#B8D5C7]/50" />
+    return (
+      <div
+        key={`timeline-row-${rowIndex}`}
+        className="relative min-h-[430px] pb-12"
+      >
+        {/* Garis horizontal */}
+        <div className="pointer-events-none absolute left-[16.6667%] right-[16.6667%] top-24 h-px bg-[#B8D5C7]/50" />
 
-                        {/* Sambungan lengkung ke baris berikutnya */}
-                        {hasNextRow && (
-                          <div
-                            className={`pointer-events-none absolute top-24 h-[320px] w-[16.6667%] border-[#B8D5C7]/50 ${
-                              connectorRight
-                                ? "right-0 rounded-r-[999px] border-b border-r border-t"
-                                : "left-0 rounded-l-[999px] border-b border-l border-t"
-                            }`}
-                          />
-                        )}
+        {/* Sambungan lengkung ke baris berikutnya */}
+        {hasNextRow && (
+          <div
+            className={`pointer-events-none absolute bottom-0 top-24 w-[16.6667%] border-[#B8D5C7]/50 ${
+              connectorRight
+                ? "right-0 rounded-r-[999px] border-b border-r border-t"
+                : "left-0 rounded-l-[999px] border-b border-l border-t"
+            }`}
+          />
+        )}
 
-                        <div className="relative grid h-full grid-cols-3">
-                          {row.map(
-                            (
-                              milestone
-                            ) => (
-                              <article
-                                key={
-                                  milestone.id
-                                }
-                                className="relative h-full px-7 text-center"
-                              >
-                                {/* Tahun */}
-                                <p className="pt-3 text-5xl font-bold tracking-tight text-[#D9F0DF]">
-                                  {
-                                    milestone.year
-                                  }
-                                </p>
+        <div className="relative grid grid-cols-3 items-start">
+          {row.map((milestone) => (
+            <article
+              key={milestone.id}
+              className="relative min-w-0 px-7 text-center"
+            >
+              {/* Tahun */}
+              <p className="pt-3 text-5xl font-bold tracking-tight text-[#D9F0DF]">
+                {milestone.year}
+              </p>
 
-                                {/* Titik timeline */}
-                                <span className="absolute left-1/2 top-[87px] z-10 flex h-[18px] w-[18px] -translate-x-1/2 items-center justify-center rounded-[5px] bg-white shadow-[0_0_0_5px_rgba(255,255,255,0.08)]">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A0A]" />
-                                </span>
+              {/* Titik timeline */}
+              <span className="absolute left-1/2 top-[87px] z-10 flex h-[18px] w-[18px] -translate-x-1/2 items-center justify-center rounded-[5px] bg-white shadow-[0_0_0_5px_rgba(255,255,255,0.08)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A0A]" />
+              </span>
 
-                                {/* Konten */}
-                                <div className="absolute inset-x-7 top-[132px]">
-                                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6B1A]">
-                                    Milestone{" "}
-                                    {String(
-                                      milestone.sequence
-                                    ).padStart(
-                                      2,
-                                      "0"
-                                    )}
-                                  </p>
+              {/* Konten milestone */}
+              <div className="mt-[78px] pb-6">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6B1A]">
+                  Milestone{" "}
+                  {String(
+                    milestone.sequence
+                  ).padStart(2, "0")}
+                </p>
 
-                                  <h3 className="mx-auto mt-3 max-w-sm text-lg font-bold leading-7 text-white">
-                                    {
-                                      milestone.title
-                                    }
-                                  </h3>
+                <h3 className="mx-auto mt-3 max-w-sm break-words text-lg font-bold leading-7 text-white">
+                  {milestone.title}
+                </h3>
 
-                                  {milestone.description && (
-                                    <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-white/55">
-                                      {
-                                        milestone.description
-                                      }
-                                    </p>
-                                  )}
-                                </div>
-                              </article>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
+                {milestone.description && (
+                  <p className="mx-auto mt-3 max-w-sm break-words text-sm leading-6 text-white/60">
+                    {milestone.description}
+                  </p>
                 )}
               </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    );
+  })}
+</div>
 
               {/* Timeline mobile dan tablet */}
               <div className="relative mt-14 lg:hidden">

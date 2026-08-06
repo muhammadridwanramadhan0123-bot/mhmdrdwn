@@ -16,6 +16,7 @@ import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
 import HomePage from "./pages/HomePage";
 import ServicesPage from "./pages/ServicesPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
+import ServiceFeatureDetailPage from "./pages/ServiceFeatureDetailPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import PortfolioDetailPage from "./pages/PortfolioDetailPage";
 import InsightPage from "./pages/InsightPage";
@@ -102,14 +103,19 @@ export default function App() {
           />
 
           <Route
-            path="/services"
-            element={<ServicesPage />}
-          />
+  path="/services"
+  element={<ServicesPage />}
+/>
 
-          <Route
-            path="/services/:slug"
-            element={<ServiceDetailPage />}
-          />
+<Route
+  path="/services/:serviceSlug/features/:featureSlug"
+  element={<ServiceFeatureDetailPage />}
+/>
+
+<Route
+  path="/services/:slug"
+  element={<ServiceDetailPage />}
+/>
 
           <Route
             path="/portfolio"
@@ -255,59 +261,59 @@ export default function App() {
           />
 
           {/* COMPANY MANAGEMENT */}
-         <Route
-  path="company"
-  element={<AdminCompanyPage />}
-/>
+          <Route
+    path="company"
+    element={<AdminCompanyPage />}
+  />
 
-<Route
-  path="company/about-us"
-  element={<AdminCompanyAboutPage />}
-/>
+  <Route
+    path="company/about-us"
+    element={<AdminCompanyAboutPage />}
+  />
 
-<Route
-  path="company/location"
-  element={<AdminCompanyLocationPage />}
-/>
+  <Route
+    path="company/location"
+    element={<AdminCompanyLocationPage />}
+  />
 
-<Route
-  path="company/milestones"
-  element={<AdminCompanyMilestonesPage />}
-/>
+  <Route
+    path="company/milestones"
+    element={<AdminCompanyMilestonesPage />}
+  />
 
-<Route
-  path="company/partners"
-  element={<AdminCompanyPartnersPage />}
-/>
+  <Route
+    path="company/partners"
+    element={<AdminCompanyPartnersPage />}
+  />
 
-<Route
-  path="company/careers"
-  element={<AdminCompanyCareersPage />}
-/>
+  <Route
+    path="company/careers"
+    element={<AdminCompanyCareersPage />}
+  />
 
-<Route
-  path="company/certifications"
-  element={
-    <AdminCompanyCertificationsPage />
-  }
-/>
+  <Route
+    path="company/certifications"
+    element={
+      <AdminCompanyCertificationsPage />
+    }
+  />
 
-<Route
-  path="company/awards"
-  element={
-    <AdminCompanyAwardsPage />
-  }
-/>
+  <Route
+    path="company/awards"
+    element={
+      <AdminCompanyAwardsPage />
+    }
+  />
 
-<Route
-  path="company/*"
-  element={
-    <Navigate
-      to="/admin/company"
-      replace
-    />
-  }
-/>
+  <Route
+    path="company/*"
+    element={
+      <Navigate
+        to="/admin/company"
+        replace
+      />
+    }
+  />
         </Route>
 
         {/* =========================

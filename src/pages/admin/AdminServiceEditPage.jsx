@@ -17,6 +17,8 @@ import {
 } from "react-router-dom";
 
 import ServiceForm from "../../components/admin/ServiceForm";
+import AdminServiceFeaturesSection from "../../components/admin/AdminServiceFeaturesSection";
+
 import {
   getServiceById,
   updateService,
@@ -26,46 +28,57 @@ export default function AdminServiceEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [service, setService] = useState(null);
+  const [service, setService] =
+    useState(null);
+
   const [loadingData, setLoadingData] =
     useState(true);
-  const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] =
-    useState("");
 
-  const loadService = useCallback(async () => {
-    if (!id) {
-      setErrorMessage(
-        "ID layanan tidak tersedia."
-      );
-      setLoadingData(false);
-      return;
-    }
+  const [saving, setSaving] =
+    useState(false);
 
-    try {
-      setLoadingData(true);
-      setErrorMessage("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-      const data = await getServiceById(id);
+  const loadService =
+    useCallback(async () => {
+      if (!id) {
+        setErrorMessage(
+          "ID layanan tidak tersedia."
+        );
 
-      setService(data);
-    } catch (error) {
-      console.error(
-        "Gagal mengambil data Service:",
-        error
-      );
+        setLoadingData(false);
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Data Service gagal dimuat."
-      );
+        return;
+      }
 
-      setService(null);
-    } finally {
-      setLoadingData(false);
-    }
-  }, [id]);
+      try {
+        setLoadingData(true);
+        setErrorMessage("");
+
+        const data =
+          await getServiceById(id);
+
+        setService(data);
+      } catch (error) {
+        console.error(
+          "Gagal mengambil data Service:",
+          error
+        );
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Data Service gagal dimuat."
+        );
+
+        setService(null);
+      } finally {
+        setLoadingData(false);
+      }
+    }, [id]);
 
   useEffect(() => {
     loadService();
@@ -75,7 +88,9 @@ export default function AdminServiceEditPage() {
     values,
     imageFile
   ) {
-    if (!id || saving) return;
+    if (!id || saving) {
+      return;
+    }
 
     try {
       setSaving(true);
@@ -90,6 +105,7 @@ export default function AdminServiceEditPage() {
 
       navigate("/admin/services", {
         replace: true,
+
         state: {
           successMessage: `Service “${updatedService.name}” berhasil diperbarui.`,
         },
@@ -130,7 +146,8 @@ export default function AdminServiceEditPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Data sedang diambil dari Supabase.
+            Data sedang diambil dari
+            Supabase.
           </p>
         </div>
       </main>
@@ -150,8 +167,9 @@ export default function AdminServiceEditPage() {
           </h1>
 
           <p className="mt-3 text-sm leading-7 text-slate-500">
-            Data Service tidak tersedia atau sudah
-            dihapus dari database.
+            Data Service tidak tersedia
+            atau sudah dihapus dari
+            database.
           </p>
 
           <Link
@@ -159,6 +177,7 @@ export default function AdminServiceEditPage() {
             className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E94F00]"
           >
             <ArrowLeft size={17} />
+
             Kembali ke Services
           </Link>
         </div>
@@ -188,6 +207,7 @@ export default function AdminServiceEditPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-[#FF5A0A] hover:text-[#FF5A0A]"
             >
               <ArrowLeft size={17} />
+
               Kembali
             </Link>
 
@@ -197,6 +217,7 @@ export default function AdminServiceEditPage() {
               className="inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E94F00]"
             >
               <RefreshCw size={17} />
+
               Coba Lagi
             </button>
           </div>
@@ -214,10 +235,12 @@ export default function AdminServiceEditPage() {
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-[#FF5A0A]"
           >
             <ArrowLeft size={17} />
+
             Kembali ke Services
           </Link>
 
-          {service.status === "published" &&
+          {service.status ===
+            "published" &&
             service.slug && (
               <Link
                 to={`/services/${service.slug}`}
@@ -225,7 +248,10 @@ export default function AdminServiceEditPage() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#082B3A] transition hover:border-[#FF5A0A] hover:text-[#FF5A0A]"
               >
-                <ExternalLink size={17} />
+                <ExternalLink
+                  size={17}
+                />
+
                 Lihat Service
               </Link>
             )}
@@ -241,8 +267,9 @@ export default function AdminServiceEditPage() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
-            Perbarui informasi, fitur, gambar, dan
-            pengaturan publikasi Service.
+            Perbarui informasi, fitur,
+            gambar, dan pengaturan publikasi
+            Service.
           </p>
         </div>
 
@@ -268,14 +295,30 @@ export default function AdminServiceEditPage() {
           </div>
         )}
 
+        {/* Form edit Service utama */}
         <ServiceForm
           key={service.id}
           initialData={service}
-          onSubmit={handleUpdateService}
+          onSubmit={
+            handleUpdateService
+          }
           loading={saving}
           submitLabel="Simpan Perubahan"
         />
+
+        {/* Detail fitur berada di luar form Service utama */}
+        <div className="mt-8">
+          <AdminServiceFeaturesSection
+            serviceId={id}
+            serviceName={
+              service.name || ""
+            }
+            serviceSlug={
+              service.slug || ""
+            }
+          />
+        </div>
       </div>
     </main>
   );
-}   
+}

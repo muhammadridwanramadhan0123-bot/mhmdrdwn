@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
   CheckCircle2,
   LoaderCircle,
   RefreshCw,
@@ -17,100 +18,89 @@ import {
 } from "react-router-dom";
 
 import { CTA } from "../components/Common";
-import { getPublishedServiceBySlug } from "../services/serviceService";
 
-function normalizeFeatures(value) {
-  if (!value) {
-    return [];
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((item) =>
-        String(item || "").trim()
-      )
-      .filter(Boolean);
-  }
-
-  if (typeof value === "string") {
-    const normalizedValue = value.trim();
-
-    if (!normalizedValue) {
-      return [];
-    }
-
-    try {
-      const parsedValue = JSON.parse(
-        normalizedValue
-      );
-
-      if (Array.isArray(parsedValue)) {
-        return parsedValue
-          .map((item) =>
-            String(item || "").trim()
-          )
-          .filter(Boolean);
-      }
-    } catch {
-      // Jika bukan JSON, pisahkan per baris atau koma.
-    }
-
-    return normalizedValue
-      .split(/\r?\n|,/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  return [];
-}
+import {
+  getPublishedServiceBySlug,
+  getPublishedServiceFeaturesByServiceSlug,
+} from "../services/serviceService";
 
 export default function ServiceDetailPage() {
   const { slug } = useParams();
 
-  const [service, setService] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [service, setService] =
+    useState(null);
 
-  const loadService = useCallback(async () => {
-    const normalizedSlug = String(
-      slug || ""
-    ).trim();
+  const [features, setFeatures] =
+    useState([]);
 
-    if (!normalizedSlug) {
-      setService(null);
-      setLoading(false);
-      setErrorMessage("");
-      return;
-    }
+  const [loading, setLoading] =
+    useState(true);
 
-    try {
-      setLoading(true);
-      setErrorMessage("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-      const data =
-        await getPublishedServiceBySlug(
-          normalizedSlug
+  const loadService =
+    useCallback(async () => {
+      const normalizedSlug =
+        String(slug || "").trim();
+
+      if (!normalizedSlug) {
+        setService(null);
+        setFeatures([]);
+        setLoading(false);
+        setErrorMessage("");
+
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        /*
+         * Mengambil data layanan utama dan
+         * detail fitur secara bersamaan.
+         */
+        const [
+          serviceData,
+          featureData,
+        ] = await Promise.all([
+          getPublishedServiceBySlug(
+            normalizedSlug
+          ),
+
+          getPublishedServiceFeaturesByServiceSlug(
+            normalizedSlug
+          ),
+        ]);
+
+        setService(serviceData);
+
+        setFeatures(
+          Array.isArray(featureData)
+            ? featureData
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Detail Service gagal dimuat:",
+          error
         );
 
-      setService(data);
-    } catch (error) {
-      console.error(
-        "Detail Service gagal dimuat:",
-        error
-      );
+        setService(null);
+        setFeatures([]);
 
-      setService(null);
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Detail Service gagal dimuat."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [slug]);
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Detail Service gagal dimuat."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, [slug]);
 
   useEffect(() => {
     loadService();
@@ -121,14 +111,17 @@ export default function ServiceDetailPage() {
       return undefined;
     }
 
-    const previousTitle = document.title;
+    const previousTitle =
+      document.title;
 
     document.title = `${
-      service.seo_title || service.name
+      service.seo_title ||
+      service.name
     } | Jasa Medika Transmedic`;
 
     return () => {
-      document.title = previousTitle;
+      document.title =
+        previousTitle;
     };
   }, [service]);
 
@@ -146,7 +139,8 @@ export default function ServiceDetailPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Data sedang diambil dari Supabase.
+            Data sedang diambil dari
+            Supabase.
           </p>
         </div>
       </main>
@@ -159,7 +153,9 @@ export default function ServiceDetailPage() {
         <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6 py-16">
           <div className="w-full max-w-xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-              <AlertTriangle size={29} />
+              <AlertTriangle
+                size={29}
+              />
             </div>
 
             <h1 className="mt-6 text-2xl font-bold text-[#082B3A]">
@@ -175,7 +171,10 @@ export default function ServiceDetailPage() {
                 to="/services"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
               >
-                <ArrowLeft size={17} />
+                <ArrowLeft
+                  size={17}
+                />
+
                 Kembali
               </Link>
 
@@ -184,7 +183,10 @@ export default function ServiceDetailPage() {
                 onClick={loadService}
                 className="inline-flex items-center gap-2 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
               >
-                <RefreshCw size={17} />
+                <RefreshCw
+                  size={17}
+                />
+
                 Coba Lagi
               </button>
             </div>
@@ -210,15 +212,19 @@ export default function ServiceDetailPage() {
             </h1>
 
             <p className="mt-4 text-sm leading-7 text-slate-500">
-              Layanan tidak tersedia, belum
-              dipublikasikan, atau slug tidak sesuai.
+              Layanan tidak tersedia,
+              belum dipublikasikan, atau
+              slug tidak sesuai.
             </p>
 
             <Link
               to="/services"
               className="mt-8 inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3 text-sm font-semibold text-white"
             >
-              <ArrowLeft size={17} />
+              <ArrowLeft
+                size={17}
+              />
+
               Kembali ke Layanan
             </Link>
           </div>
@@ -229,16 +235,17 @@ export default function ServiceDetailPage() {
     );
   }
 
-const features = normalizeFeatures(
-  service.features
-);
+  const servicesBackUrl =
+    service.category_slug
+      ? `/services?category=${encodeURIComponent(
+          service.category_slug
+        )}`
+      : "/services";
 
-const servicesBackUrl =
-  service.category_slug
-    ? `/services?category=${encodeURIComponent(
-        service.category_slug
-      )}`
-    : "/services";
+  const currentServiceSlug =
+    String(
+      service.slug || slug || ""
+    ).trim();
 
   return (
     <>
@@ -257,11 +264,11 @@ const servicesBackUrl =
               <span>/</span>
 
               <Link
-  to={servicesBackUrl}
-  className="hover:text-orange"
->
-  Product & Services
-</Link>
+                to={servicesBackUrl}
+                className="hover:text-orange"
+              >
+                Product & Services
+              </Link>
 
               <span>/</span>
 
@@ -283,7 +290,9 @@ const servicesBackUrl =
 
                 {service.short_description && (
                   <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600">
-                    {service.short_description}
+                    {
+                      service.short_description
+                    }
                   </p>
                 )}
 
@@ -293,23 +302,31 @@ const servicesBackUrl =
                     className="inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3.5 text-sm font-semibold text-white"
                   >
                     Konsultasikan Kebutuhan
-                    <ArrowRight size={18} />
+
+                    <ArrowRight
+                      size={18}
+                    />
                   </Link>
 
                   <Link
-  to={servicesBackUrl}
-  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
->
-  <ArrowLeft size={18} />
-  Kembali ke Kategori
-</Link>
+                    to={servicesBackUrl}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
+                  >
+                    <ArrowLeft
+                      size={18}
+                    />
+
+                    Kembali ke Kategori
+                  </Link>
                 </div>
               </div>
 
               <div>
                 {service.image_url ? (
                   <img
-                    src={service.image_url}
+                    src={
+                      service.image_url
+                    }
                     alt={service.name}
                     className="h-72 w-full rounded-3xl border border-slate-200 object-cover shadow-soft md:h-96"
                   />
@@ -334,7 +351,8 @@ const servicesBackUrl =
             </p>
 
             <h2 className="mt-3 text-3xl font-bold text-[#082B3A]">
-              Solusi untuk kebutuhan organisasi Anda
+              Solusi untuk kebutuhan
+              organisasi Anda
             </h2>
 
             <div className="mt-6 whitespace-pre-line text-base leading-9 text-slate-600">
@@ -342,6 +360,7 @@ const servicesBackUrl =
                 "Informasi lengkap layanan belum tersedia."}
             </div>
 
+            {/* Data berasal dari service_features */}
             {features.length > 0 && (
               <div className="mt-12">
                 <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
@@ -350,20 +369,45 @@ const servicesBackUrl =
 
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   {features.map(
-                    (feature, index) => (
-                      <div
-                        key={`${feature}-${index}`}
-                        className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    (
+                      feature,
+                      index
+                    ) => (
+                      <Link
+                        key={
+                          feature.id ||
+                          `${feature.slug}-${index}`
+                        }
+                        to={`/services/${currentServiceSlug}/features/${feature.slug}`}
+                        aria-label={`Lihat detail ${feature.name}`}
+                        className="group flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-orange hover:bg-orange/5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange/20"
                       >
-                        <CheckCircle2
-                          size={20}
-                          className="mt-0.5 shrink-0 text-orange"
-                        />
+                        <div className="flex min-w-0 items-start gap-3">
+                          <CheckCircle2
+                            size={20}
+                            className="mt-0.5 shrink-0 text-orange"
+                          />
 
-                        <span className="text-sm leading-6 text-slate-600">
-                          {feature}
-                        </span>
-                      </div>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-semibold leading-6 text-slate-600 transition group-hover:text-[#082B3A]">
+                              {feature.name}
+                            </span>
+
+                            {feature.short_description && (
+                              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-400">
+                                {
+                                  feature.short_description
+                                }
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <ArrowUpRight
+                          size={18}
+                          className="shrink-0 text-slate-300 transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-orange"
+                        />
+                      </Link>
                     )
                   )}
                 </div>

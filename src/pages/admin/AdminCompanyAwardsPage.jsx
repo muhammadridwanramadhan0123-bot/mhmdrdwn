@@ -7,23 +7,23 @@ import {
 import {
   AlertTriangle,
   ArrowLeft,
-  BadgeCheck,
+  Building2,
   CalendarDays,
   CheckCircle2,
-  Download,
   Edit3,
   ExternalLink,
   Eye,
   EyeOff,
-  FileImage,
-  FileText,
+  ImageIcon,
   LoaderCircle,
+  Medal,
   Plus,
   RefreshCw,
   Save,
   Search,
   ShieldCheck,
   Trash2,
+  Trophy,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -32,51 +32,53 @@ import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
 
 import {
-  CERTIFICATION_CATEGORIES,
-  createCertification,
-  deleteCertification,
+  createAward,
+  deleteAward,
   deleteCredentialAsset,
-  getAdminCertifications,
-  updateCertification,
-  uploadCertificationFile,
+  getAdminAwards,
+  updateAward,
+  uploadAwardImage,
 } from "../../services/companyCredentialService";
 
-function createInitialFormData(
-  sortOrder = 0
-) {
+function createInitialFormData(sortOrder = 0) {
   return {
     title: "",
-    category: "ISO",
+    institution: "",
     description: "",
+    year: "",
     image_url: "",
-    document_url: "",
-    issued_year: "",
     sort_order: sortOrder,
     is_active: true,
   };
 }
 
-function sortCertificationRecords(items) {
-  return [...items].sort(
-    (firstItem, secondItem) => {
-      const firstOrder =
-        Number(firstItem.sort_order) || 0;
+function sortAwardRecords(items) {
+  return [...items].sort((firstItem, secondItem) => {
+    const firstOrder =
+      Number(firstItem.sort_order) || 0;
 
-      const secondOrder =
-        Number(secondItem.sort_order) || 0;
+    const secondOrder =
+      Number(secondItem.sort_order) || 0;
 
-      if (firstOrder !== secondOrder) {
-        return firstOrder - secondOrder;
-      }
-
-      return String(
-        firstItem.title || ""
-      ).localeCompare(
-        String(secondItem.title || ""),
-        "id"
-      );
+    if (firstOrder !== secondOrder) {
+      return firstOrder - secondOrder;
     }
-  );
+
+    const firstYear =
+      Number(firstItem.year) || 0;
+
+    const secondYear =
+      Number(secondItem.year) || 0;
+
+    if (firstYear !== secondYear) {
+      return secondYear - firstYear;
+    }
+
+    return String(firstItem.title || "").localeCompare(
+      String(secondItem.title || ""),
+      "id"
+    );
+  });
 }
 
 function formatUpdatedAt(value) {
@@ -99,59 +101,7 @@ function formatUpdatedAt(value) {
   }).format(date);
 }
 
-function getFileNameFromUrl(value) {
-  const normalizedUrl = String(
-    value || ""
-  ).trim();
-
-  if (!normalizedUrl) {
-    return "";
-  }
-
-  try {
-    const parsedUrl = new URL(
-      normalizedUrl
-    );
-
-    const pathParts =
-      parsedUrl.pathname.split("/");
-
-    return decodeURIComponent(
-      pathParts[pathParts.length - 1] ||
-        "dokumen-sertifikat"
-    );
-  } catch {
-    const pathParts =
-      normalizedUrl.split("/");
-
-    return decodeURIComponent(
-      pathParts[pathParts.length - 1] ||
-        "dokumen-sertifikat"
-    );
-  }
-}
-
-function getCategoryClass(category) {
-  switch (category) {
-    case "ISO":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-
-    case "Hak Cipta":
-      return "border-violet-200 bg-violet-50 text-violet-700";
-
-    case "PSE":
-      return "border-cyan-200 bg-cyan-50 text-cyan-700";
-
-    case "BSSN":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-
-    case "Sertifikat Lain":
-    default:
-      return "border-slate-200 bg-slate-100 text-slate-700";
-  }
-}
-
-function CertificationsLoading() {
+function AwardsLoading() {
   return (
     <div className="space-y-7">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -166,29 +116,23 @@ function CertificationsLoading() {
       <div className="h-20 animate-pulse rounded-3xl bg-slate-200" />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map(
-          (item) => (
-            <div
-              key={item}
-              className="h-[460px] animate-pulse rounded-3xl bg-slate-200"
-            />
-          )
-        )}
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <div
+            key={item}
+            className="h-[460px] animate-pulse rounded-3xl bg-slate-200"
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-export default function AdminCompanyCertificationsPage() {
-  const {
-    isAdmin,
-    isEditor,
-  } = useAdminAuth();
+export default function AdminCompanyAwardsPage() {
+  const { isAdmin, isEditor } =
+    useAdminAuth();
 
-  const [
-    certifications,
-    setCertifications,
-  ] = useState([]);
+  const [awards, setAwards] =
+    useState([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -196,15 +140,11 @@ export default function AdminCompanyCertificationsPage() {
   const [saving, setSaving] =
     useState(false);
 
-  const [
-    deletingId,
-    setDeletingId,
-  ] = useState(null);
+  const [deletingId, setDeletingId] =
+    useState(null);
 
-  const [
-    togglingId,
-    setTogglingId,
-  ] = useState(null);
+  const [togglingId, setTogglingId] =
+    useState(null);
 
   const [formOpen, setFormOpen] =
     useState(false);
@@ -228,23 +168,8 @@ export default function AdminCompanyCertificationsPage() {
     setOriginalImageUrl,
   ] = useState("");
 
-  const [
-    documentFile,
-    setDocumentFile,
-  ] = useState(null);
-
-  const [
-    originalDocumentUrl,
-    setOriginalDocumentUrl,
-  ] = useState("");
-
   const [searchTerm, setSearchTerm] =
     useState("");
-
-  const [
-    categoryFilter,
-    setCategoryFilter,
-  ] = useState("all");
 
   const [statusFilter, setStatusFilter] =
     useState("all");
@@ -262,9 +187,7 @@ export default function AdminCompanyCertificationsPage() {
   useEffect(() => {
     return () => {
       if (
-        imagePreviewUrl.startsWith(
-          "blob:"
-        )
+        imagePreviewUrl.startsWith("blob:")
       ) {
         URL.revokeObjectURL(
           imagePreviewUrl
@@ -273,17 +196,17 @@ export default function AdminCompanyCertificationsPage() {
     };
   }, [imagePreviewUrl]);
 
-  const loadCertifications =
+  const loadAwards =
     useCallback(async () => {
       try {
         setLoading(true);
         setErrorMessage("");
 
         const data =
-          await getAdminCertifications();
+          await getAdminAwards();
 
-        setCertifications(
-          sortCertificationRecords(
+        setAwards(
+          sortAwardRecords(
             Array.isArray(data)
               ? data
               : []
@@ -291,14 +214,16 @@ export default function AdminCompanyCertificationsPage() {
         );
       } catch (error) {
         console.error(
-          "Sertifikasi gagal dimuat:",
+          "Awards gagal dimuat:",
           error
         );
+
+        setAwards([]);
 
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Daftar sertifikasi gagal dimuat."
+            : "Daftar penghargaan gagal dimuat."
         );
       } finally {
         setLoading(false);
@@ -306,104 +231,95 @@ export default function AdminCompanyCertificationsPage() {
     }, []);
 
   useEffect(() => {
-    loadCertifications();
-  }, [loadCertifications]);
+    loadAwards();
+  }, [loadAwards]);
 
   const summary = useMemo(() => {
-    const active =
-      certifications.filter(
-        (item) => item.is_active
-      ).length;
+    const active = awards.filter(
+      (item) => item.is_active
+    ).length;
 
-    const withDocument =
-      certifications.filter((item) =>
+    const withImage = awards.filter(
+      (item) =>
         Boolean(
           String(
-            item.document_url || ""
+            item.image_url || ""
           ).trim()
         )
-      ).length;
+    ).length;
 
-    const categories = new Set(
-      certifications
-        .map((item) => item.category)
+    const institutions = new Set(
+      awards
+        .map((item) =>
+          String(
+            item.institution || ""
+          ).trim()
+        )
         .filter(Boolean)
     );
 
     return {
-      total: certifications.length,
+      total: awards.length,
       active,
       inactive:
-        certifications.length -
-        active,
-      withDocument,
-      categories: categories.size,
+        awards.length - active,
+      withImage,
+      institutions:
+        institutions.size,
     };
-  }, [certifications]);
+  }, [awards]);
 
-  const filteredCertifications =
+  const filteredAwards =
     useMemo(() => {
       const normalizedSearch =
         searchTerm.trim().toLowerCase();
 
-      return certifications.filter(
-        (certification) => {
-          const searchableText = [
-            certification.title,
-            certification.category,
-            certification.description,
-            certification.issued_year,
-          ]
-            .map((value) =>
-              String(value || "")
-                .toLowerCase()
-            )
-            .join(" ");
+      return awards.filter((award) => {
+        const searchableText = [
+          award.title,
+          award.institution,
+          award.description,
+          award.year,
+        ]
+          .map((value) =>
+            String(value || "")
+              .toLowerCase()
+          )
+          .join(" ");
 
-          const matchesSearch =
-            !normalizedSearch ||
-            searchableText.includes(
-              normalizedSearch
-            );
-
-          const matchesCategory =
-            categoryFilter === "all" ||
-            certification.category ===
-              categoryFilter;
-
-          const matchesStatus =
-            statusFilter === "all" ||
-            (statusFilter === "active" &&
-              certification.is_active) ||
-            (statusFilter ===
-              "inactive" &&
-              !certification.is_active);
-
-          return (
-            matchesSearch &&
-            matchesCategory &&
-            matchesStatus
+        const matchesSearch =
+          !normalizedSearch ||
+          searchableText.includes(
+            normalizedSearch
           );
-        }
-      );
+
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" &&
+            award.is_active) ||
+          (statusFilter ===
+            "inactive" &&
+            !award.is_active);
+
+        return (
+          matchesSearch &&
+          matchesStatus
+        );
+      });
     }, [
-      certifications,
+      awards,
       searchTerm,
-      categoryFilter,
       statusFilter,
     ]);
 
   function resetFilters() {
     setSearchTerm("");
-    setCategoryFilter("all");
     setStatusFilter("all");
   }
 
   function clearImagePreview() {
     if (
-      imagePreviewUrl.startsWith(
-        "blob:"
-      )
+      imagePreviewUrl.startsWith("blob:")
     ) {
       URL.revokeObjectURL(
         imagePreviewUrl
@@ -423,9 +339,6 @@ export default function AdminCompanyCertificationsPage() {
     setImageFile(null);
     clearImagePreview();
     setOriginalImageUrl("");
-
-    setDocumentFile(null);
-    setOriginalDocumentUrl("");
   }
 
   function closeForm() {
@@ -439,7 +352,7 @@ export default function AdminCompanyCertificationsPage() {
 
   function openCreateForm() {
     const highestSortOrder =
-      certifications.reduce(
+      awards.reduce(
         (highestValue, item) =>
           Math.max(
             highestValue,
@@ -460,62 +373,44 @@ export default function AdminCompanyCertificationsPage() {
     clearImagePreview();
     setOriginalImageUrl("");
 
-    setDocumentFile(null);
-    setOriginalDocumentUrl("");
-
     setErrorMessage("");
     setSuccessMessage("");
     setFormOpen(true);
   }
 
-  function openEditForm(
-    certification
-  ) {
-    setEditingId(certification.id);
+  function openEditForm(award) {
+    setEditingId(award.id);
 
     setFormData({
-      title:
-        certification.title || "",
+      title: award.title || "",
 
-      category:
-        certification.category ||
-        "ISO",
+      institution:
+        award.institution || "",
 
       description:
-        certification.description || "",
+        award.description || "",
+
+      year:
+        award.year ?? "",
 
       image_url:
-        certification.image_url || "",
-
-      document_url:
-        certification.document_url ||
-        "",
-
-      issued_year:
-        certification.issued_year ??
-        "",
+        award.image_url || "",
 
       sort_order:
         Number(
-          certification.sort_order
+          award.sort_order
         ) || 0,
 
-      is_active: Boolean(
-        certification.is_active
-      ),
+      is_active:
+        Boolean(award.is_active),
     });
 
     setOriginalImageUrl(
-      certification.image_url || ""
-    );
-
-    setOriginalDocumentUrl(
-      certification.document_url || ""
+      award.image_url || ""
     );
 
     setImageFile(null);
     clearImagePreview();
-    setDocumentFile(null);
 
     setErrorMessage("");
     setSuccessMessage("");
@@ -566,21 +461,18 @@ export default function AdminCompanyCertificationsPage() {
       )
     ) {
       setErrorMessage(
-        "Gambar sertifikat harus berformat JPG, PNG, atau WebP."
+        "Gambar penghargaan harus berformat JPG, PNG, atau WebP."
       );
 
       return;
     }
 
-    const maximumSize =
-      10 * 1024 * 1024;
-
     if (
       selectedFile.size >
-      maximumSize
+      3 * 1024 * 1024
     ) {
       setErrorMessage(
-        "Ukuran gambar maksimal 10 MB."
+        "Ukuran gambar maksimal 3 MB."
       );
 
       return;
@@ -588,8 +480,6 @@ export default function AdminCompanyCertificationsPage() {
 
     clearImagePreview();
 
-    setErrorMessage("");
-    setSuccessMessage("");
     setImageFile(selectedFile);
 
     setImagePreviewUrl(
@@ -597,56 +487,9 @@ export default function AdminCompanyCertificationsPage() {
         selectedFile
       )
     );
-  }
-
-  function handleDocumentChange(
-    event
-  ) {
-    const selectedFile =
-      event.target.files?.[0];
-
-    event.target.value = "";
-
-    if (!selectedFile) {
-      return;
-    }
-
-    const allowedTypes = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
-
-    if (
-      !allowedTypes.includes(
-        selectedFile.type
-      )
-    ) {
-      setErrorMessage(
-        "Dokumen harus berformat PDF, JPG, PNG, atau WebP."
-      );
-
-      return;
-    }
-
-    const maximumSize =
-      10 * 1024 * 1024;
-
-    if (
-      selectedFile.size >
-      maximumSize
-    ) {
-      setErrorMessage(
-        "Ukuran dokumen maksimal 10 MB."
-      );
-
-      return;
-    }
 
     setErrorMessage("");
     setSuccessMessage("");
-    setDocumentFile(selectedFile);
   }
 
   function handleRemoveImage() {
@@ -663,50 +506,24 @@ export default function AdminCompanyCertificationsPage() {
     setSuccessMessage("");
   }
 
-  function handleRemoveDocument() {
-    setDocumentFile(null);
-
-    setFormData(
-      (currentFormData) => ({
-        ...currentFormData,
-        document_url: "",
-      })
-    );
-
-    setSuccessMessage("");
-  }
-
   function validateForm() {
-    const title =
-      formData.title.trim();
-
-    if (!title) {
-      return "Judul sertifikasi wajib diisi.";
+    if (!formData.title.trim()) {
+      return "Nama penghargaan wajib diisi.";
     }
 
-    if (
-      !CERTIFICATION_CATEGORIES.includes(
-        formData.category
-      )
-    ) {
-      return "Kategori sertifikasi tidak valid.";
-    }
-
-    if (
-      formData.issued_year !== ""
-    ) {
-      const issuedYear =
+    if (formData.year !== "") {
+      const year =
         Number.parseInt(
-          formData.issued_year,
+          formData.year,
           10
         );
 
       if (
-        !Number.isFinite(issuedYear) ||
-        issuedYear < 1900 ||
-        issuedYear > 2200
+        !Number.isFinite(year) ||
+        year < 1900 ||
+        year > 2200
       ) {
-        return "Tahun penerbitan harus berada antara 1900 dan 2200.";
+        return "Tahun penghargaan harus berada antara 1900 dan 2200.";
       }
     }
 
@@ -744,67 +561,43 @@ export default function AdminCompanyCertificationsPage() {
     setErrorMessage("");
     setSuccessMessage("");
 
-    const newlyUploadedAssets = [];
+    let uploadedImage = null;
     let saveCompleted = false;
 
     try {
       let nextImageUrl =
         formData.image_url;
 
-      let nextDocumentUrl =
-        formData.document_url;
-
       if (imageFile) {
-        const uploadedImage =
-          await uploadCertificationFile(
+        uploadedImage =
+          await uploadAwardImage(
             imageFile
           );
 
         nextImageUrl =
           uploadedImage.publicUrl;
-
-        newlyUploadedAssets.push(
-          uploadedImage
-        );
-      }
-
-      if (documentFile) {
-        const uploadedDocument =
-          await uploadCertificationFile(
-            documentFile
-          );
-
-        nextDocumentUrl =
-          uploadedDocument.publicUrl;
-
-        newlyUploadedAssets.push(
-          uploadedDocument
-        );
       }
 
       const payload = {
         title:
           formData.title.trim(),
 
-        category:
-          formData.category,
+        institution:
+          formData.institution.trim(),
 
         description:
           formData.description.trim(),
 
-        image_url:
-          nextImageUrl,
-
-        document_url:
-          nextDocumentUrl,
-
-        issued_year:
-          formData.issued_year
+        year:
+          formData.year !== ""
             ? Number.parseInt(
-                formData.issued_year,
+                formData.year,
                 10
               )
             : null,
+
+        image_url:
+          nextImageUrl,
 
         sort_order:
           Number.parseInt(
@@ -812,116 +605,90 @@ export default function AdminCompanyCertificationsPage() {
             10
           ),
 
-        is_active: Boolean(
-          formData.is_active
-        ),
+        is_active:
+          Boolean(
+            formData.is_active
+          ),
       };
 
-      const savedCertification =
-        editingId
-          ? await updateCertification(
-              editingId,
-              payload
-            )
-          : await createCertification(
-              payload
-            );
+      const savedAward = editingId
+        ? await updateAward(
+            editingId,
+            payload
+          )
+        : await createAward(payload);
 
       saveCompleted = true;
-
-      const oldAssets = new Set();
 
       if (
         originalImageUrl &&
         originalImageUrl !==
-          savedCertification.image_url
-      ) {
-        oldAssets.add(
-          originalImageUrl
-        );
-      }
-
-      if (
-        originalDocumentUrl &&
-        originalDocumentUrl !==
-          savedCertification.document_url
-      ) {
-        oldAssets.add(
-          originalDocumentUrl
-        );
-      }
-
-      for (
-        const assetUrl of oldAssets
+          savedAward.image_url
       ) {
         try {
           await deleteCredentialAsset(
-            assetUrl
+            originalImageUrl
           );
         } catch (deleteError) {
           console.warn(
-            "File lama gagal dihapus:",
+            "Gambar lama gagal dihapus:",
             deleteError
           );
         }
       }
 
-      setCertifications(
-        (currentItems) => {
-          if (editingId) {
-            return sortCertificationRecords(
-              currentItems.map((item) =>
-                item.id === editingId
-                  ? savedCertification
-                  : item
-              )
-            );
-          }
-
-          return sortCertificationRecords([
-            ...currentItems,
-            savedCertification,
-          ]);
+      setAwards((currentItems) => {
+        if (editingId) {
+          return sortAwardRecords(
+            currentItems.map((item) =>
+              item.id === editingId
+                ? savedAward
+                : item
+            )
+          );
         }
-      );
+
+        return sortAwardRecords([
+          ...currentItems,
+          savedAward,
+        ]);
+      });
 
       setSuccessMessage(
         editingId
-          ? "Sertifikasi berhasil diperbarui."
-          : "Sertifikasi berhasil ditambahkan."
+          ? "Penghargaan berhasil diperbarui."
+          : "Penghargaan berhasil ditambahkan."
       );
 
       setFormOpen(false);
       resetFormState();
     } catch (error) {
       console.error(
-        "Sertifikasi gagal disimpan:",
+        "Penghargaan gagal disimpan:",
         error
       );
 
-      if (!saveCompleted) {
-        for (
-          const uploadedAsset of
-          newlyUploadedAssets
-        ) {
-          try {
-            await deleteCredentialAsset(
-              uploadedAsset?.publicUrl ||
-                uploadedAsset
-            );
-          } catch (cleanupError) {
-            console.warn(
-              "File sementara gagal dibersihkan:",
-              cleanupError
-            );
-          }
+      if (
+        uploadedImage &&
+        !saveCompleted
+      ) {
+        try {
+          await deleteCredentialAsset(
+            uploadedImage?.publicUrl ||
+              uploadedImage
+          );
+        } catch (cleanupError) {
+          console.warn(
+            "Gambar sementara gagal dibersihkan:",
+            cleanupError
+          );
         }
       }
 
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Sertifikasi gagal disimpan."
+          : "Penghargaan gagal disimpan."
       );
     } finally {
       setSaving(false);
@@ -929,94 +696,82 @@ export default function AdminCompanyCertificationsPage() {
   }
 
   async function handleToggleActive(
-    certification
+    award
   ) {
     try {
-      setTogglingId(
-        certification.id
-      );
-
+      setTogglingId(award.id);
       setErrorMessage("");
       setSuccessMessage("");
 
-      const updatedCertification =
-        await updateCertification(
-          certification.id,
+      const updatedAward =
+        await updateAward(
+          award.id,
           {
-            title:
-              certification.title,
+            title: award.title,
 
-            category:
-              certification.category,
+            institution:
+              award.institution,
 
             description:
-              certification.description,
+              award.description,
+
+            year: award.year,
 
             image_url:
-              certification.image_url,
-
-            document_url:
-              certification.document_url,
-
-            issued_year:
-              certification.issued_year,
+              award.image_url,
 
             sort_order:
-              certification.sort_order,
+              award.sort_order,
 
             is_active:
-              !certification.is_active,
+              !award.is_active,
           }
         );
 
-      setCertifications(
-        (currentItems) =>
-          sortCertificationRecords(
-            currentItems.map((item) =>
-              item.id ===
-              certification.id
-                ? updatedCertification
-                : item
-            )
+      setAwards((currentItems) =>
+        sortAwardRecords(
+          currentItems.map((item) =>
+            item.id === award.id
+              ? updatedAward
+              : item
           )
+        )
       );
 
       setSuccessMessage(
-        updatedCertification.is_active
-          ? "Sertifikasi berhasil diaktifkan."
-          : "Sertifikasi berhasil dinonaktifkan."
+        updatedAward.is_active
+          ? "Penghargaan berhasil diaktifkan."
+          : "Penghargaan berhasil dinonaktifkan."
       );
     } catch (error) {
       console.error(
-        "Status sertifikasi gagal diperbarui:",
+        "Status penghargaan gagal diperbarui:",
         error
       );
 
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Status sertifikasi gagal diperbarui."
+          : "Status penghargaan gagal diperbarui."
       );
     } finally {
       setTogglingId(null);
     }
   }
 
-  async function handleDelete(
-    certification
-  ) {
+  async function handleDelete(award) {
     if (!isAdmin) {
       setSuccessMessage("");
 
       setErrorMessage(
-        "Hanya admin yang dapat menghapus sertifikasi."
+        "Hanya admin yang dapat menghapus penghargaan."
       );
 
       return;
     }
 
     const approved = window.confirm(
-      `Hapus sertifikasi "${certification.title}"?\n\nData yang dihapus tidak dapat dikembalikan.`
+      `Hapus penghargaan "${award.title}"?\n\nData yang dihapus tidak dapat dikembalikan.`
     );
 
     if (!approved) {
@@ -1024,61 +779,45 @@ export default function AdminCompanyCertificationsPage() {
     }
 
     try {
-      setDeletingId(
-        certification.id
-      );
-
+      setDeletingId(award.id);
       setErrorMessage("");
       setSuccessMessage("");
 
-      await deleteCertification(
-        certification.id
-      );
+      await deleteAward(award.id);
 
-      const assetUrls = new Set(
-        [
-          certification.image_url,
-          certification.document_url,
-        ].filter(Boolean)
-      );
-
-      for (
-        const assetUrl of assetUrls
-      ) {
+      if (award.image_url) {
         try {
           await deleteCredentialAsset(
-            assetUrl
+            award.image_url
           );
         } catch (deleteAssetError) {
           console.warn(
-            "Data terhapus, tetapi file gagal dihapus:",
+            "Data terhapus, tetapi gambar gagal dihapus:",
             deleteAssetError
           );
         }
       }
 
-      setCertifications(
-        (currentItems) =>
-          currentItems.filter(
-            (item) =>
-              item.id !==
-              certification.id
-          )
+      setAwards((currentItems) =>
+        currentItems.filter(
+          (item) =>
+            item.id !== award.id
+        )
       );
 
       setSuccessMessage(
-        "Sertifikasi berhasil dihapus."
+        "Penghargaan berhasil dihapus."
       );
     } catch (error) {
       console.error(
-        "Sertifikasi gagal dihapus:",
+        "Penghargaan gagal dihapus:",
         error
       );
 
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Sertifikasi gagal dihapus."
+          : "Penghargaan gagal dihapus."
       );
     } finally {
       setDeletingId(null);
@@ -1086,20 +825,12 @@ export default function AdminCompanyCertificationsPage() {
   }
 
   if (loading) {
-    return (
-      <CertificationsLoading />
-    );
+    return <AwardsLoading />;
   }
 
   const displayedImage =
     imagePreviewUrl ||
     formData.image_url;
-
-  const displayedDocumentName =
-    documentFile?.name ||
-    getFileNameFromUrl(
-      formData.document_url
-    );
 
   return (
     <div className="space-y-8">
@@ -1114,19 +845,19 @@ export default function AdminCompanyCertificationsPage() {
             Company Management
           </Link>
 
-          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
-            <ShieldCheck size={14} />
-            Certifications
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+            <Trophy size={14} />
+            Awards & Recognition
           </div>
 
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#082B3A] md:text-4xl">
-            Kelola Sertifikasi
+            Kelola Penghargaan
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-            Kelola ISO, Hak Cipta, PSE,
-            BSSN, sertifikat lainnya,
-            dokumen, gambar, status, dan
+            Kelola penghargaan perusahaan,
+            institusi pemberi penghargaan,
+            tahun, gambar, status, dan
             urutan tampil.
           </p>
         </div>
@@ -1144,9 +875,7 @@ export default function AdminCompanyCertificationsPage() {
 
           <button
             type="button"
-            onClick={
-              loadCertifications
-            }
+            onClick={loadAwards}
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-[#FF5A0A] hover:text-[#FF5A0A] sm:w-auto"
           >
             <RefreshCw size={16} />
@@ -1159,12 +888,12 @@ export default function AdminCompanyCertificationsPage() {
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E94F00] sm:w-auto"
           >
             <Plus size={18} />
-            Tambah Sertifikasi
+            Tambah Penghargaan
           </button>
         </div>
       </section>
 
-      {/* Error */}
+      {/* Pesan error */}
       {errorMessage && (
         <div
           role="alert"
@@ -1199,7 +928,7 @@ export default function AdminCompanyCertificationsPage() {
         </div>
       )}
 
-      {/* Success */}
+      {/* Pesan berhasil */}
       {successMessage && (
         <div
           role="status"
@@ -1234,7 +963,7 @@ export default function AdminCompanyCertificationsPage() {
         </div>
       )}
 
-      {/* Mode editor */}
+      {/* Informasi editor */}
       {isEditor && (
         <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
           <ShieldCheck
@@ -1249,9 +978,9 @@ export default function AdminCompanyCertificationsPage() {
 
             <p className="mt-1 text-sm leading-6 text-blue-700">
               Anda dapat menambah,
-              mengedit, mengunggah file,
+              mengedit, mengunggah gambar,
               dan mengubah status
-              sertifikasi. Penghapusan
+              penghargaan. Penghapusan
               data hanya dapat dilakukan
               oleh admin.
             </p>
@@ -1262,7 +991,7 @@ export default function AdminCompanyCertificationsPage() {
       {/* Statistik */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-3xl bg-[#082B3A] p-6 text-white">
-          <ShieldCheck
+          <Trophy
             size={24}
             className="text-[#FF5A0A]"
           />
@@ -1272,7 +1001,7 @@ export default function AdminCompanyCertificationsPage() {
           </p>
 
           <p className="mt-2 text-sm text-white/60">
-            Total sertifikasi
+            Total penghargaan
           </p>
         </article>
 
@@ -1287,40 +1016,40 @@ export default function AdminCompanyCertificationsPage() {
           </p>
 
           <p className="mt-2 text-sm text-slate-500">
-            Sertifikasi aktif
+            Penghargaan aktif
           </p>
         </article>
 
         <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <FileText
+          <ImageIcon
             size={24}
             className="text-blue-600"
           />
 
           <p className="mt-7 text-3xl font-bold text-[#082B3A]">
-            {summary.withDocument}
+            {summary.withImage}
           </p>
 
           <p className="mt-2 text-sm text-slate-500">
-            Memiliki dokumen
+            Memiliki gambar
           </p>
         </article>
 
-        <article className="rounded-3xl bg-gradient-to-br from-blue-600 to-blue-800 p-6 text-white">
-          <BadgeCheck size={24} />
+        <article className="rounded-3xl bg-gradient-to-br from-amber-500 to-orange-600 p-6 text-white">
+          <Building2 size={24} />
 
           <p className="mt-7 text-3xl font-bold">
-            {summary.categories}
+            {summary.institutions}
           </p>
 
           <p className="mt-2 text-sm text-white/80">
-            Kategori digunakan
+            Institusi pemberi
           </p>
         </article>
       </section>
 
       {/* Filter */}
-      <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm xl:grid-cols-[minmax(0,1fr)_220px_200px_auto]">
+      <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm xl:grid-cols-[minmax(0,1fr)_220px_auto]">
         <div className="relative">
           <Search
             size={18}
@@ -1335,35 +1064,10 @@ export default function AdminCompanyCertificationsPage() {
                 event.target.value
               )
             }
-            placeholder="Cari judul, kategori, tahun..."
+            placeholder="Cari penghargaan, institusi, atau tahun..."
             className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm text-[#082B3A] outline-none transition placeholder:text-slate-400 focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
           />
         </div>
-
-        <select
-          value={categoryFilter}
-          onChange={(event) =>
-            setCategoryFilter(
-              event.target.value
-            )
-          }
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-        >
-          <option value="all">
-            Semua Kategori
-          </option>
-
-          {CERTIFICATION_CATEGORIES.map(
-            (category) => (
-              <option
-                key={category}
-                value={category}
-              >
-                {category}
-              </option>
-            )
-          )}
-        </select>
 
         <select
           value={statusFilter}
@@ -1396,38 +1100,36 @@ export default function AdminCompanyCertificationsPage() {
         </button>
       </section>
 
-      {/* Daftar */}
-      {filteredCertifications.length ===
-      0 ? (
+      {/* Daftar penghargaan */}
+      {filteredAwards.length === 0 ? (
         <section className="rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
-          <ShieldCheck
+          <Trophy
             size={44}
             className="mx-auto text-slate-300"
           />
 
           <h2 className="mt-5 text-xl font-bold text-[#082B3A]">
-            Sertifikasi tidak ditemukan
+            Penghargaan tidak ditemukan
           </h2>
 
           <p className="mt-2 text-sm text-slate-500">
             Belum ada data atau tidak ada
-            sertifikasi yang sesuai filter.
+            penghargaan yang sesuai filter.
           </p>
 
           <button
             type="button"
             onClick={
-              certifications.length === 0
+              awards.length === 0
                 ? openCreateForm
                 : resetFilters
             }
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white"
           >
-            {certifications.length ===
-            0 ? (
+            {awards.length === 0 ? (
               <>
                 <Plus size={17} />
-                Tambah Sertifikasi
+                Tambah Penghargaan
               </>
             ) : (
               "Tampilkan Semua"
@@ -1436,228 +1138,190 @@ export default function AdminCompanyCertificationsPage() {
         </section>
       ) : (
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredCertifications.map(
-            (certification) => (
-              <article
-                key={certification.id}
-                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
-              >
-                <div className="relative flex h-52 items-center justify-center overflow-hidden bg-slate-50">
-                  {certification.image_url ? (
-                    <img
-                      src={
-                        certification.image_url
-                      }
-                      alt={
-                        certification.title
-                      }
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+          {filteredAwards.map((award) => (
+            <article
+              key={award.id}
+              className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-xl"
+            >
+              <div className="relative flex h-56 items-center justify-center overflow-hidden bg-slate-50">
+                {award.image_url ? (
+                  <img
+                    src={award.image_url}
+                    alt={award.title}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <Medal
+                      size={54}
+                      className="mx-auto text-slate-300"
                     />
-                  ) : (
-                    <div className="text-center">
-                      <ShieldCheck
-                        size={52}
-                        className="mx-auto text-slate-300"
-                      />
 
-                      <p className="mt-3 text-xs font-semibold text-slate-400">
-                        Gambar belum tersedia
-                      </p>
-                    </div>
-                  )}
-
-                  <span
-                    className={`absolute left-3 top-3 max-w-[60%] truncate rounded-full border px-3 py-1.5 text-xs font-semibold sm:left-5 sm:top-5 ${getCategoryClass(
-                      certification.category
-                    )}`}
-                  >
-                    {
-                      certification.category
-                    }
-                  </span>
-
-                  <span
-                    className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-xs font-semibold sm:right-5 sm:top-5 ${
-                      certification.is_active
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-700 text-white"
-                    }`}
-                  >
-                    {certification.is_active
-                      ? "Aktif"
-                      : "Nonaktif"}
-                  </span>
-                </div>
-
-                <div className="p-5 sm:p-6">
-                  <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#FF5A0A]">
-                      Urutan{" "}
-                      {
-                        certification.sort_order
-                      }
-                    </p>
-
-                    <p className="text-xs text-slate-400">
-                      {formatUpdatedAt(
-                        certification.updated_at
-                      )}
+                    <p className="mt-3 text-xs font-semibold text-slate-400">
+                      Gambar belum tersedia
                     </p>
                   </div>
+                )}
 
-                  <h2 className="mt-4 break-words text-xl font-bold leading-8 text-[#082B3A]">
-                    {certification.title}
-                  </h2>
+                {award.year && (
+                  <span className="absolute left-3 top-3 rounded-full bg-[#FF5A0A] px-3 py-1.5 text-xs font-semibold text-white sm:left-5 sm:top-5">
+                    {award.year}
+                  </span>
+                )}
 
-                  {certification.issued_year && (
-                    <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
-                      <CalendarDays
-                        size={16}
-                      />
+                <span
+                  className={`absolute right-3 top-3 rounded-full px-3 py-1.5 text-xs font-semibold sm:right-5 sm:top-5 ${
+                    award.is_active
+                      ? "bg-emerald-500 text-white"
+                      : "bg-slate-700 text-white"
+                  }`}
+                >
+                  {award.is_active
+                    ? "Aktif"
+                    : "Nonaktif"}
+                </span>
+              </div>
 
-                      Diterbitkan{" "}
-                      {
-                        certification.issued_year
-                      }
-                    </p>
-                  )}
-
-                  <p className="mt-4 line-clamp-3 min-h-[5.25rem] text-sm leading-7 text-slate-500">
-                    {certification.description ||
-                      "Deskripsi sertifikasi belum tersedia."}
+              <div className="p-5 sm:p-6">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#FF5A0A]">
+                    Urutan{" "}
+                    {award.sort_order}
                   </p>
 
-                  <div className="mt-5 border-t border-slate-100 pt-5">
-                    {certification.document_url ? (
-                      <a
-                        href={
-                          certification.document_url
-                        }
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600"
-                      >
-                        <Download
-                          size={16}
-                        />
-
-                        Lihat Dokumen
-
-                        <ExternalLink
-                          size={14}
-                        />
-                      </a>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-400">
-                        <FileText size={16} />
-                        Dokumen belum tersedia
-                      </span>
+                  <p className="text-xs text-slate-400">
+                    {formatUpdatedAt(
+                      award.updated_at
                     )}
-                  </div>
+                  </p>
+                </div>
 
-                  <div className="mt-6 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleToggleActive(
-                          certification
-                        )
-                      }
-                      disabled={
-                        togglingId ===
-                        certification.id
-                      }
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        certification.is_active
-                          ? "border-slate-200 text-slate-600 hover:border-slate-400"
-                          : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                      }`}
-                    >
-                      {togglingId ===
-                      certification.id ? (
+                <h2 className="mt-4 break-words text-xl font-bold leading-8 text-[#082B3A]">
+                  {award.title}
+                </h2>
+
+                {award.institution && (
+                  <p className="mt-3 flex items-start gap-2 text-sm font-semibold leading-6 text-slate-500">
+                    <Building2
+                      size={16}
+                      className="mt-0.5 shrink-0"
+                    />
+
+                    {award.institution}
+                  </p>
+                )}
+
+                {award.year && (
+                  <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+                    <CalendarDays
+                      size={16}
+                    />
+
+                    Tahun {award.year}
+                  </p>
+                )}
+
+                <p className="mt-4 line-clamp-3 min-h-[5.25rem] text-sm leading-7 text-slate-500">
+                  {award.description ||
+                    "Deskripsi penghargaan belum tersedia."}
+                </p>
+
+                <div className="mt-6 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleToggleActive(
+                        award
+                      )
+                    }
+                    disabled={
+                      togglingId ===
+                      award.id
+                    }
+                    className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      award.is_active
+                        ? "border-slate-200 text-slate-600 hover:border-slate-400"
+                        : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {togglingId ===
+                    award.id ? (
+                      <LoaderCircle
+                        size={16}
+                        className="animate-spin"
+                      />
+                    ) : award.is_active ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
+
+                    {award.is_active
+                      ? "Nonaktifkan"
+                      : "Aktifkan"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openEditForm(award)
+                    }
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0A4053]"
+                  >
+                    <Edit3 size={16} />
+                    Edit
+                  </button>
+                </div>
+
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleDelete(award)
+                    }
+                    disabled={
+                      deletingId ===
+                      award.id
+                    }
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingId ===
+                    award.id ? (
+                      <>
                         <LoaderCircle
                           size={16}
                           className="animate-spin"
                         />
-                      ) : certification.is_active ? (
-                        <EyeOff size={16} />
-                      ) : (
-                        <Eye size={16} />
-                      )}
-
-                      {certification.is_active
-                        ? "Nonaktifkan"
-                        : "Aktifkan"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openEditForm(
-                          certification
-                        )
-                      }
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0A4053]"
-                    >
-                      <Edit3 size={16} />
-                      Edit
-                    </button>
-                  </div>
-
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleDelete(
-                          certification
-                        )
-                      }
-                      disabled={
-                        deletingId ===
-                        certification.id
-                      }
-                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {deletingId ===
-                      certification.id ? (
-                        <>
-                          <LoaderCircle
-                            size={16}
-                            className="animate-spin"
-                          />
-                          Menghapus...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2
-                            size={16}
-                          />
-                          Hapus Sertifikasi
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-              </article>
-            )
-          )}
+                        Menghapus...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} />
+                        Hapus Penghargaan
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
         </section>
       )}
 
-      {/* Modal */}
+      {/* Modal tambah/edit */}
       {formOpen && (
         <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#082B3A]/70 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-8">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl">
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5 md:px-8">
               <div className="min-w-0">
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#FF5A0A]">
-                  Certification Form
+                  Award Form
                 </p>
 
                 <h2 className="mt-2 break-words text-xl font-bold text-[#082B3A] sm:text-2xl">
                   {editingId
-                    ? "Edit Sertifikasi"
-                    : "Tambah Sertifikasi"}
+                    ? "Edit Penghargaan"
+                    : "Tambah Penghargaan"}
                 </h2>
               </div>
 
@@ -1673,15 +1337,15 @@ export default function AdminCompanyCertificationsPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-8 p-4 sm:p-6 md:p-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid gap-8 p-4 sm:p-6 md:p-8 lg:grid-cols-[minmax(0,1fr)_320px]">
                 {/* Form utama */}
                 <div className="min-w-0 space-y-6">
                   <div>
                     <label
-                      htmlFor="certification-title"
+                      htmlFor="award-title"
                       className="mb-2 block text-sm font-semibold text-[#082B3A]"
                     >
-                      Judul Sertifikasi
+                      Nama Penghargaan
 
                       <span className="ml-1 text-red-500">
                         *
@@ -1689,70 +1353,54 @@ export default function AdminCompanyCertificationsPage() {
                     </label>
 
                     <input
-                      id="certification-title"
+                      id="award-title"
                       name="title"
                       type="text"
                       value={formData.title}
                       onChange={handleChange}
                       required
-                      placeholder="Contoh: ISO 27001 Information Security Management"
+                      placeholder="Contoh: Best Healthcare Technology Provider"
                       className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition placeholder:text-slate-400 focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
 
-                  <div className="grid gap-5 md:grid-cols-3">
+                  <div>
+                    <label
+                      htmlFor="award-institution"
+                      className="mb-2 block text-sm font-semibold text-[#082B3A]"
+                    >
+                      Institusi Pemberi
+                    </label>
+
+                    <input
+                      id="award-institution"
+                      name="institution"
+                      type="text"
+                      value={
+                        formData.institution
+                      }
+                      onChange={handleChange}
+                      placeholder="Contoh: Kementerian Kesehatan Republik Indonesia"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition placeholder:text-slate-400 focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
+                    />
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-2">
                     <div>
                       <label
-                        htmlFor="certification-category"
+                        htmlFor="award-year"
                         className="mb-2 block text-sm font-semibold text-[#082B3A]"
                       >
-                        Kategori
-
-                        <span className="ml-1 text-red-500">
-                          *
-                        </span>
-                      </label>
-
-                      <select
-                        id="certification-category"
-                        name="category"
-                        value={
-                          formData.category
-                        }
-                        onChange={handleChange}
-                        required
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                      >
-                        {CERTIFICATION_CATEGORIES.map(
-                          (category) => (
-                            <option
-                              key={category}
-                              value={category}
-                            >
-                              {category}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="certification-year"
-                        className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                      >
-                        Tahun Penerbitan
+                        Tahun Penghargaan
                       </label>
 
                       <input
-                        id="certification-year"
-                        name="issued_year"
+                        id="award-year"
+                        name="year"
                         type="number"
                         min="1900"
                         max="2200"
-                        value={
-                          formData.issued_year
-                        }
+                        value={formData.year}
                         onChange={handleChange}
                         placeholder="2026"
                         className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
@@ -1761,7 +1409,7 @@ export default function AdminCompanyCertificationsPage() {
 
                     <div>
                       <label
-                        htmlFor="certification-sort-order"
+                        htmlFor="award-sort-order"
                         className="mb-2 block text-sm font-semibold text-[#082B3A]"
                       >
                         Urutan Tampil
@@ -1772,7 +1420,7 @@ export default function AdminCompanyCertificationsPage() {
                       </label>
 
                       <input
-                        id="certification-sort-order"
+                        id="award-sort-order"
                         name="sort_order"
                         type="number"
                         min="0"
@@ -1789,7 +1437,7 @@ export default function AdminCompanyCertificationsPage() {
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-4">
                       <label
-                        htmlFor="certification-description"
+                        htmlFor="award-description"
                         className="text-sm font-semibold text-[#082B3A]"
                       >
                         Deskripsi
@@ -1805,14 +1453,14 @@ export default function AdminCompanyCertificationsPage() {
                     </div>
 
                     <textarea
-                      id="certification-description"
+                      id="award-description"
                       name="description"
                       value={
                         formData.description
                       }
                       onChange={handleChange}
-                      rows={9}
-                      placeholder="Jelaskan sertifikasi, ruang lingkup, atau informasi penting lainnya..."
+                      rows={8}
+                      placeholder="Jelaskan penghargaan dan pencapaian perusahaan..."
                       className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 text-[#082B3A] outline-none transition placeholder:text-slate-400 focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
@@ -1830,167 +1478,81 @@ export default function AdminCompanyCertificationsPage() {
 
                     <div>
                       <p className="font-semibold text-[#082B3A]">
-                        Tampilkan sertifikasi
+                        Tampilkan penghargaan
                       </p>
 
                       <p className="mt-1 text-sm leading-6 text-slate-500">
-                        Sertifikasi aktif akan
-                        muncul pada bagian About
+                        Penghargaan aktif akan
+                        muncul pada halaman About
                         Us publik.
                       </p>
                     </div>
                   </label>
                 </div>
 
-                {/* Aset */}
-                <aside className="min-w-0 space-y-6">
-                  <section>
-                    <p className="text-sm font-semibold text-[#082B3A]">
-                      Gambar Sertifikat
-                    </p>
+                {/* Gambar */}
+                <aside className="min-w-0">
+                  <p className="text-sm font-semibold text-[#082B3A]">
+                    Gambar Penghargaan
+                  </p>
 
-                    <div className="mt-3 flex min-h-52 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-                      {displayedImage ? (
-                        <img
-                          src={displayedImage}
-                          alt="Preview sertifikat"
-                          className="h-52 w-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center">
-                          <FileImage
-                            size={38}
-                            className="mx-auto text-slate-300"
-                          />
-
-                          <p className="mt-3 text-sm font-semibold text-slate-500">
-                            Gambar belum dipilih
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0A4053]">
-                        <UploadCloud
-                          size={17}
+                  <div className="mt-3 flex min-h-64 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                    {displayedImage ? (
+                      <img
+                        src={displayedImage}
+                        alt="Preview penghargaan"
+                        className="h-64 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <Medal
+                          size={44}
+                          className="mx-auto text-slate-300"
                         />
 
-                        Pilih Gambar
+                        <p className="mt-3 text-sm font-semibold text-slate-500">
+                          Gambar belum dipilih
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          onChange={
-                            handleImageChange
-                          }
-                          className="hidden"
-                        />
-                      </label>
+                  <div className="mt-4 space-y-3">
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0A4053]">
+                      <UploadCloud
+                        size={17}
+                      />
 
-                      {displayedImage && (
-                        <button
-                          type="button"
-                          onClick={
-                            handleRemoveImage
-                          }
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                        >
-                          <Trash2 size={16} />
-                          Hapus Gambar
-                        </button>
-                      )}
-                    </div>
-                  </section>
+                      Pilih Gambar
 
-                  <section className="border-t border-slate-100 pt-6">
-                    <p className="text-sm font-semibold text-[#082B3A]">
-                      Dokumen Sertifikat
-                    </p>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={
+                          handleImageChange
+                        }
+                        className="hidden"
+                      />
+                    </label>
 
-                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      {displayedDocumentName ? (
-                        <>
-                          <FileText
-                            size={30}
-                            className="text-blue-600"
-                          />
+                    {displayedImage && (
+                      <button
+                        type="button"
+                        onClick={
+                          handleRemoveImage
+                        }
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      >
+                        <Trash2 size={16} />
+                        Hapus Gambar
+                      </button>
+                    )}
+                  </div>
 
-                          <p className="mt-3 break-all text-sm font-semibold leading-6 text-[#082B3A]">
-                            {
-                              displayedDocumentName
-                            }
-                          </p>
-
-                          {formData.document_url &&
-                            !documentFile && (
-                              <a
-                                href={
-                                  formData.document_url
-                                }
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-blue-600"
-                              >
-                                Buka Dokumen
-
-                                <ExternalLink
-                                  size={13}
-                                />
-                              </a>
-                            )}
-                        </>
-                      ) : (
-                        <div className="py-3 text-center">
-                          <FileText
-                            size={34}
-                            className="mx-auto text-slate-300"
-                          />
-
-                          <p className="mt-3 text-sm font-semibold text-slate-500">
-                            Dokumen belum dipilih
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">
-                        <UploadCloud
-                          size={17}
-                        />
-
-                        Pilih Dokumen
-
-                        <input
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={
-                            handleDocumentChange
-                          }
-                          className="hidden"
-                        />
-                      </label>
-
-                      {displayedDocumentName && (
-                        <button
-                          type="button"
-                          onClick={
-                            handleRemoveDocument
-                          }
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                        >
-                          <Trash2 size={16} />
-                          Hapus Dokumen
-                        </button>
-                      )}
-                    </div>
-
-                    <p className="mt-4 text-xs leading-5 text-slate-400">
-                      Format PDF, JPG, PNG, atau
-                      WebP. Ukuran maksimal 10 MB.
-                    </p>
-                  </section>
+                  <p className="mt-4 text-xs leading-5 text-slate-400">
+                    Format JPG, PNG, atau
+                    WebP. Ukuran maksimal 3 MB.
+                  </p>
                 </aside>
               </div>
 
@@ -2015,6 +1577,7 @@ export default function AdminCompanyCertificationsPage() {
                         size={18}
                         className="animate-spin"
                       />
+
                       Menyimpan...
                     </>
                   ) : (
@@ -2023,7 +1586,7 @@ export default function AdminCompanyCertificationsPage() {
 
                       {editingId
                         ? "Simpan Perubahan"
-                        : "Tambah Sertifikasi"}
+                        : "Tambah Penghargaan"}
                     </>
                   )}
                 </button>
