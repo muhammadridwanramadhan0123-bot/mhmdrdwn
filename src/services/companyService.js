@@ -1117,6 +1117,20 @@ async function getCareerTranslationsByIds(
  *    address
  *    logo_url
  */
+/*
+ * ======================================================
+ * PUBLIC SITE SETTINGS
+ * ======================================================
+ *
+ * Source of truth:
+ *
+ * 1. setting_key + setting_value
+ * 2. direct columns hanya sebagai fallback
+ *
+ * Hal ini penting karena struktur site_settings
+ * saat ini menyimpan kedua bentuk data sekaligus.
+ */
+
 export async function getPublicSiteSettings() {
   const {
     data,
@@ -1137,6 +1151,7 @@ export async function getPublicSiteSettings() {
       }
     );
 
+
   if (error) {
     throwCompanyError(
       error,
@@ -1144,63 +1159,289 @@ export async function getPublicSiteSettings() {
     );
   }
 
-  const settings = {};
 
-  for (
-    const row of data || []
-  ) {
+  const rows =
+    Array.isArray(data)
+      ? data
+      : [];
+
+
+  /*
+   * ====================================================
+   * 1. SETTING_KEY + SETTING_VALUE
+   * ====================================================
+   *
+   * Ini adalah source of truth utama.
+   *
+   * Contoh:
+   *
+   * company_name
+   * email
+   * phone
+   * whatsapp
+   * address
+   * instagram
+   * linkedin
+   * youtube
+   * website
+   * google_maps_url
+   * logo_url
+   */
+
+  const keySettings = {};
+
+
+  for (const row of rows) {
     const settingKey =
       normalizeText(
         row.setting_key
       );
 
-    if (
-      settingKey &&
-      settings[
-        settingKey
-      ] === undefined
-    ) {
-      settings[
-        settingKey
-      ] =
-        parseSettingValue(
-          row.setting_value
-        );
+    if (!settingKey) {
+      continue;
     }
 
-    const directColumns = [
-      "company_name",
-      "tagline",
-      "email",
-      "phone",
-      "whatsapp",
-      "address",
-      "logo_url",
-      "instagram_url",
-      "linkedin_url",
-    ];
 
+    /*
+     * setting_key UNIQUE di database,
+     * tetapi pengecekan tetap dibuat
+     * untuk keamanan.
+     */
+
+    if (
+      keySettings[
+        settingKey
+      ] !== undefined
+    ) {
+      continue;
+    }
+
+
+    keySettings[
+      settingKey
+    ] =
+      parseSettingValue(
+        row.setting_value
+      );
+  }
+
+
+  /*
+   * ====================================================
+   * 2. DIRECT COLUMNS
+   * ====================================================
+   *
+   * Digunakan hanya sebagai fallback.
+   *
+   * Jangan sampai direct column
+   * menimpa setting_key.
+   */
+
+  const directSettings = {};
+
+
+  const directColumns = [
+    "company_name",
+    "tagline",
+    "email",
+    "phone",
+    "whatsapp",
+    "address",
+    "logo_url",
+    "instagram_url",
+    "linkedin_url",
+  ];
+
+
+  for (const row of rows) {
     for (
       const columnName
       of directColumns
     ) {
+      if (
+        directSettings[
+          columnName
+        ] !== undefined
+      ) {
+        continue;
+      }
+
+
       const columnValue =
-        row[columnName];
+        row[
+          columnName
+        ];
+
 
       if (
-        settings[
-          columnName
-        ] === undefined &&
-        columnValue !== null &&
-        columnValue !== ""
+        columnValue === null ||
+        columnValue === undefined
       ) {
-        settings[
-          columnName
-        ] =
-          columnValue;
+        continue;
       }
+
+
+      if (
+        typeof columnValue ===
+          "string" &&
+        !columnValue.trim()
+      ) {
+        continue;
+      }
+
+
+      directSettings[
+        columnName
+      ] =
+        columnValue;
     }
   }
+
+
+  /*
+   * ====================================================
+   * 3. MERGE
+   * ====================================================
+   *
+   * direct dahulu,
+   * keySettings belakangan.
+   *
+   * Karena object terakhir
+   * akan memiliki prioritas lebih tinggi.
+   */
+
+  const settings = {
+    ...directSettings,
+    ...keySettings,
+  };
+
+
+  /*
+   * ====================================================
+   * 4. NORMALIZE / ALIAS
+   * ====================================================
+   */
+
+
+  /*
+   * Instagram
+   */
+
+  settings.instagram_url =
+    normalizeText(
+      settings.instagram
+    ) ||
+    normalizeText(
+      settings.instagram_url
+    );
+
+
+  /*
+   * LinkedIn
+   */
+
+  settings.linkedin_url =
+    normalizeText(
+      settings.linkedin
+    ) ||
+    normalizeText(
+      settings.linkedin_url
+    );
+
+
+  /*
+   * YouTube
+   *
+   * Database sekarang memakai:
+   *
+   * setting_key = youtube
+   */
+
+  settings.youtube_url =
+    normalizeText(
+      settings.youtube
+    ) ||
+    normalizeText(
+      settings.youtube_url
+    );
+
+
+  /*
+   * Website
+   */
+
+  settings.website_url =
+    normalizeText(
+      settings.website
+    ) ||
+    normalizeText(
+      settings.website_url
+    );
+
+
+  /*
+   * Google Maps
+   */
+
+  settings.google_maps_url =
+    normalizeText(
+      settings.google_maps_url
+    );
+
+
+  /*
+   * Logo
+   */
+
+  settings.logo_url =
+    normalizeText(
+      settings.logo_url
+    );
+
+
+  /*
+   * Company
+   */
+
+  settings.company_name =
+    normalizeText(
+      settings.company_name
+    );
+
+
+  settings.tagline =
+    normalizeText(
+      settings.tagline
+    );
+
+
+  /*
+   * Contact
+   */
+
+  settings.email =
+    normalizeText(
+      settings.email
+    );
+
+
+  settings.phone =
+    normalizeText(
+      settings.phone
+    );
+
+
+  settings.whatsapp =
+    normalizeText(
+      settings.whatsapp
+    );
+
+
+  settings.address =
+    normalizeText(
+      settings.address
+    );
+
 
   return settings;
 }

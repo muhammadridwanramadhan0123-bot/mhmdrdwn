@@ -23,8 +23,10 @@ import {
   Mail,
   MapPin,
   Menu,
+  MessageCircle,
   Phone,
   RefreshCw,
+  Youtube,
   X,
 } from "lucide-react";
 
@@ -33,8 +35,13 @@ import {
 } from "../services/serviceService";
 
 import {
+  getPublicSiteSettings,
+} from "../services/companyService";
+
+import {
   useLanguage,
 } from "../contexts/LanguageContext";
+
 
 /*
  * ======================================================
@@ -75,6 +82,7 @@ const nav = [
   },
 ];
 
+
 const companyNavigation = [
   {
     key: "aboutUs",
@@ -98,6 +106,201 @@ const companyNavigation = [
   },
 ];
 
+
+/*
+ * ======================================================
+ * SITE SETTINGS FALLBACK
+ * ======================================================
+ */
+
+const DEFAULT_SITE_SETTINGS = {
+  company_name:
+    "Jasa Medika Transmedic",
+
+  logo_url:
+    "/logo.webp",
+
+  email:
+    "info@jasamedikatransmedic.com",
+
+  phone:
+    "+62 878 7000 7781",
+
+  whatsapp:
+    "6287870007781",
+
+  address:
+    "Gedung Paramarta Tridharma, Jl. Cikutra Baru Raya No. 28, Bandung 40124",
+
+  instagram_url:
+    "",
+
+  linkedin_url:
+    "",
+
+  youtube_url:
+    "",
+
+  google_maps_url:
+    "",
+};
+
+
+/*
+ * ======================================================
+ * SITE SETTINGS HELPERS
+ * ======================================================
+ */
+
+function normalizeSettingText(
+  value
+) {
+  return String(
+    value ?? ""
+  ).trim();
+}
+
+
+/*
+ * Hanya menerima URL HTTP / HTTPS.
+ */
+
+function normalizeExternalUrl(
+  value
+) {
+  const normalizedValue =
+    normalizeSettingText(
+      value
+    );
+
+  if (!normalizedValue) {
+    return "";
+  }
+
+  try {
+    const url =
+      new URL(
+        normalizedValue
+      );
+
+    if (
+      url.protocol !== "https:" &&
+      url.protocol !== "http:"
+    ) {
+      return "";
+    }
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+
+/*
+ * WhatsApp:
+ *
+ * 087870007781
+ * → 6287870007781
+ *
+ * 87870007781
+ * → 6287870007781
+ *
+ * +62 878 7000 7781
+ * → 6287870007781
+ */
+
+function normalizeWhatsAppNumber(
+  value
+) {
+  let number =
+    normalizeSettingText(
+      value
+    ).replace(
+      /\D/g,
+      ""
+    );
+
+  if (!number) {
+    return "";
+  }
+
+  if (
+    number.startsWith(
+      "0"
+    )
+  ) {
+    number =
+      `62${number.slice(
+        1
+      )}`;
+  }
+
+  if (
+    number.startsWith(
+      "8"
+    )
+  ) {
+    number =
+      `62${number}`;
+  }
+
+  if (
+    number.length < 9 ||
+    number.length > 15
+  ) {
+    return "";
+  }
+
+  return number;
+}
+
+
+function createPhoneHref(
+  value
+) {
+  const normalizedPhone =
+    normalizeSettingText(
+      value
+    );
+
+  if (!normalizedPhone) {
+    return "";
+  }
+
+  const phone =
+    normalizedPhone.replace(
+      /[^\d+]/g,
+      ""
+    );
+
+  if (!phone) {
+    return "";
+  }
+
+  return `tel:${phone}`;
+}
+
+
+function createEmailHref(
+  value
+) {
+  const email =
+    normalizeSettingText(
+      value
+    );
+
+  if (
+    !email ||
+    !email.includes("@")
+  ) {
+    return "";
+  }
+
+  return `mailto:${email}`;
+}
+
+
 /*
  * ======================================================
  * FALLBACK PRODUCT NAVIGATION
@@ -112,6 +315,7 @@ const fallbackProductNavigation = [
     slug: "simrs-erp",
     features: [],
   },
+
   {
     id: "fallback-consulting",
     name:
@@ -120,6 +324,7 @@ const fallbackProductNavigation = [
       "konsultasi-pengelolaan-fasilitas-kesehatan",
     features: [],
   },
+
   {
     id: "fallback-infrastructure",
     name:
@@ -128,6 +333,7 @@ const fallbackProductNavigation = [
       "infrastruktur-it-layanan-pendukung",
     features: [],
   },
+
   {
     id: "fallback-training",
     name:
@@ -137,6 +343,7 @@ const fallbackProductNavigation = [
     features: [],
   },
 ];
+
 
 /*
  * ======================================================
@@ -150,6 +357,7 @@ const SIMRS_SERVICE_SLUG =
 const INFRASTRUCTURE_SERVICE_SLUG =
   "infrastruktur-it-layanan-pendukung";
 
+
 function isSimrsService(service) {
   return (
     service?.slug ===
@@ -157,12 +365,14 @@ function isSimrsService(service) {
   );
 }
 
+
 function isSingleLinkService(service) {
   return (
     service?.slug ===
     INFRASTRUCTURE_SERVICE_SLUG
   );
 }
+
 
 /*
  * ======================================================
@@ -211,6 +421,7 @@ function sortFeatureItems(
   );
 }
 
+
 /*
  * ======================================================
  * FEATURE HIERARCHY
@@ -227,6 +438,7 @@ function createFeatureGroups(
       ? features
       : [];
 
+
   const featureMap =
     new Map(
       records.map(
@@ -240,9 +452,6 @@ function createFeatureGroups(
       )
     );
 
-  /*
-   * Child -> Parent
-   */
 
   featureMap.forEach(
     (feature) => {
@@ -265,9 +474,6 @@ function createFeatureGroups(
     }
   );
 
-  /*
-   * Sort children
-   */
 
   featureMap.forEach(
     (feature) => {
@@ -278,9 +484,6 @@ function createFeatureGroups(
     }
   );
 
-  /*
-   * Root feature only
-   */
 
   const rootFeatures =
     Array.from(
@@ -290,10 +493,12 @@ function createFeatureGroups(
         !feature.parent_feature_id
     );
 
+
   const groupMap =
     new Map();
 
   const standalone = [];
+
 
   rootFeatures.forEach(
     (feature) => {
@@ -339,6 +544,7 @@ function createFeatureGroups(
     }
   );
 
+
   const groups =
     Array.from(
       groupMap.values()
@@ -374,6 +580,7 @@ function createFeatureGroups(
           );
         }
       );
+
 
   standalone.sort(
     (
@@ -411,11 +618,13 @@ function createFeatureGroups(
     }
   );
 
+
   return {
     groups,
     standalone,
   };
 }
+
 
 /*
  * ======================================================
@@ -439,8 +648,10 @@ function FeatureMenuLink({
   const hasChildren =
     children.length > 0;
 
+
   return (
     <div className="group/item">
+
       <Link
         to={`/services/${serviceSlug}/features/${feature.slug}`}
         onClick={onClick}
@@ -454,6 +665,7 @@ function FeatureMenuLink({
             : "text-[13px] leading-5"
         }`}
       >
+
         <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
 
         <span className="min-w-0 flex-1">
@@ -464,10 +676,13 @@ function FeatureMenuLink({
           size={13}
           className="mt-[3px] shrink-0 text-slate-300 transition-all duration-200 group-hover/link:translate-x-0.5 group-hover/link:text-orange"
         />
+
       </Link>
+
 
       {hasChildren && (
         <div className="ml-4 mt-1 space-y-0.5 border-l border-slate-200 pl-3">
+
           {children.map(
             (child) => (
               <Link
@@ -484,6 +699,7 @@ function FeatureMenuLink({
                     : "text-[11px] leading-5"
                 }`}
               >
+
                 <span className="mt-[8px] h-1 w-1 shrink-0 rounded-full bg-slate-300 transition group-hover/child:bg-orange" />
 
                 <span className="flex-1">
@@ -491,14 +707,18 @@ function FeatureMenuLink({
                     child.name
                   }
                 </span>
+
               </Link>
             )
           )}
+
         </div>
       )}
+
     </div>
   );
 }
+
 
 /*
  * ======================================================
@@ -514,7 +734,9 @@ function FeatureGroupBlock({
 }) {
   return (
     <div className="min-w-0">
+
       <div className="mb-2 flex items-start gap-2">
+
         <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-orange" />
 
         <p
@@ -526,9 +748,12 @@ function FeatureGroupBlock({
         >
           {group.name}
         </p>
+
       </div>
 
+
       <div className="space-y-0.5">
+
         {group.features.map(
           (feature) => (
             <FeatureMenuLink
@@ -550,10 +775,13 @@ function FeatureGroupBlock({
             />
           )
         )}
+
       </div>
+
     </div>
   );
 }
+
 
 /*
  * ======================================================
@@ -579,6 +807,7 @@ function ProductServiceCard({
       service
     );
 
+
   const groups =
     Array.isArray(
       service?.menu?.groups
@@ -586,12 +815,14 @@ function ProductServiceCard({
       ? service.menu.groups
       : [];
 
+
   const standalone =
     Array.isArray(
       service?.menu?.standalone
     )
       ? service.menu.standalone
       : [];
+
 
   return (
     <section
@@ -601,6 +832,7 @@ function ProductServiceCard({
           : ""
       }`}
     >
+
       {/* HEADER */}
 
       <div
@@ -610,7 +842,6 @@ function ProductServiceCard({
             : "px-5 pb-4 pt-5 sm:px-6 sm:pt-6"
         }`}
       >
-        {/* NUMBER */}
 
         <div
           className={`flex shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold tracking-[0.08em] text-slate-400 transition-colors group-hover/service:bg-orange/10 group-hover/service:text-orange ${
@@ -624,7 +855,6 @@ function ProductServiceCard({
           }
         </div>
 
-        {/* TITLE */}
 
         <Link
           to={`/services/${service.slug}`}
@@ -633,6 +863,7 @@ function ProductServiceCard({
           }
           className="group/title flex min-w-0 flex-1 items-start justify-between gap-4"
         >
+
           <h3
             className={`min-w-0 font-bold text-[#082B3A] transition-colors group-hover/title:text-orange ${
               compact
@@ -644,6 +875,7 @@ function ProductServiceCard({
               service.name
             }
           </h3>
+
 
           <div
             className={`mt-0.5 flex shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 transition-all duration-200 group-hover/title:border-orange group-hover/title:bg-orange group-hover/title:text-white ${
@@ -661,8 +893,11 @@ function ProductServiceCard({
               className="transition-transform group-hover/title:translate-x-0.5"
             />
           </div>
+
         </Link>
+
       </div>
+
 
       <div
         className={`border-t border-slate-100 ${
@@ -672,11 +907,9 @@ function ProductServiceCard({
         }`}
       />
 
-      {/* ================================================
-          INFRASTRUCTURE SINGLE LINK
-      ================================================ */}
 
       {isInfrastructure ? (
+
         <Link
           to={`/services/${service.slug}`}
           onClick={
@@ -688,6 +921,7 @@ function ProductServiceCard({
               : "px-5 py-5 sm:px-6 sm:py-6"
           }`}
         >
+
           <p
             className={`text-slate-500 ${
               compact
@@ -700,6 +934,7 @@ function ProductServiceCard({
             )}
           </p>
 
+
           <div
             className={`flex flex-wrap gap-2 ${
               compact
@@ -707,6 +942,7 @@ function ProductServiceCard({
                 : "mt-5"
             }`}
           >
+
             {[
               "servicesMenu.hardware",
               "servicesMenu.software",
@@ -723,7 +959,9 @@ function ProductServiceCard({
                 </span>
               )
             )}
+
           </div>
+
 
           <div
             className={`flex items-center gap-2 text-xs font-bold text-[#082B3A] transition-colors group-hover/infra:text-orange ${
@@ -732,6 +970,7 @@ function ProductServiceCard({
                 : "mt-5"
             }`}
           >
+
             {t(
               "servicesMenu.viewDetails"
             )}
@@ -740,9 +979,13 @@ function ProductServiceCard({
               size={13}
               className="transition-transform group-hover/infra:translate-x-1"
             />
+
           </div>
+
         </Link>
+
       ) : (
+
         <div
           className={
             compact
@@ -750,23 +993,14 @@ function ProductServiceCard({
               : "px-5 pb-5 pt-4 sm:px-6 sm:pb-6"
           }
         >
-          {/* ============================================
-              SIMRS SPECIAL LAYOUT
-
-              LEFT
-              Solusi Klinis
-
-              RIGHT
-              Operasional
-              TransHealthcare Ecosystem
-          ============================================ */}
 
           {isSimrs &&
           groups.length > 0 ? (
+
             <div className="grid items-start gap-x-8 gap-y-6 md:grid-cols-2">
-              {/* LEFT */}
 
               <div className="min-w-0">
+
                 {groups[0] && (
                   <FeatureGroupBlock
                     group={
@@ -781,9 +1015,11 @@ function ProductServiceCard({
                   />
                 )}
 
-                {standalone.length >
-                  0 && (
+
+                {standalone.length > 0 && (
+
                   <div className="mt-5 border-t border-slate-100 pt-4">
+
                     {standalone.map(
                       (
                         feature
@@ -804,13 +1040,16 @@ function ProductServiceCard({
                         />
                       )
                     )}
+
                   </div>
+
                 )}
+
               </div>
 
-              {/* RIGHT */}
 
               <div className="min-w-0 space-y-7">
+
                 {groups
                   .slice(1)
                   .map(
@@ -833,14 +1072,17 @@ function ProductServiceCard({
                       />
                     )
                   )}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* NORMAL GROUPS */}
 
-              {groups.length >
-                0 && (
+              </div>
+
+            </div>
+
+          ) : (
+
+            <>
+
+              {groups.length > 0 && (
+
                 <div
                   className={`grid ${
                     compact
@@ -848,12 +1090,12 @@ function ProductServiceCard({
                       : "gap-x-6 gap-y-5"
                   } ${
                     !compact &&
-                    groups.length >
-                      1
+                    groups.length > 1
                       ? "md:grid-cols-2"
                       : "grid-cols-1"
                   }`}
                 >
+
                   {groups.map(
                     (
                       group
@@ -877,13 +1119,14 @@ function ProductServiceCard({
                       />
                     )
                   )}
+
                 </div>
+
               )}
 
-              {/* STANDALONE */}
 
-              {standalone.length >
-                0 && (
+              {standalone.length > 0 && (
+
                 <div
                   className={`${
                     groups.length > 0
@@ -893,12 +1136,12 @@ function ProductServiceCard({
                       : ""
                   } ${
                     !compact &&
-                    standalone.length >
-                      4
+                    standalone.length > 4
                       ? "grid gap-x-5 md:grid-cols-2"
                       : "space-y-0.5"
                   }`}
                 >
+
                   {standalone.map(
                     (
                       feature
@@ -922,17 +1165,19 @@ function ProductServiceCard({
                       />
                     )
                   )}
+
                 </div>
+
               )}
+
             </>
+
           )}
 
-          {/* EMPTY */}
 
-          {groups.length ===
-            0 &&
-            standalone.length ===
-              0 && (
+          {groups.length === 0 &&
+            standalone.length === 0 && (
+
               <Link
                 to={`/services/${service.slug}`}
                 onClick={
@@ -940,6 +1185,7 @@ function ProductServiceCard({
                 }
                 className="group/empty flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"
               >
+
                 <p className="text-xs leading-6 text-slate-500">
                   {t(
                     "servicesMenu.viewComplete"
@@ -950,13 +1196,19 @@ function ProductServiceCard({
                   size={14}
                   className="shrink-0 text-slate-300 transition group-hover/empty:translate-x-1 group-hover/empty:text-orange"
                 />
+
               </Link>
+
             )}
+
         </div>
+
       )}
+
     </section>
   );
 }
+
 
 /*
  * ======================================================
@@ -983,6 +1235,7 @@ function LanguageSwitch({
         )
       }
     >
+
       <button
         type="button"
         onClick={() =>
@@ -1008,6 +1261,7 @@ function LanguageSwitch({
         ID
       </button>
 
+
       <button
         type="button"
         onClick={() =>
@@ -1032,9 +1286,11 @@ function LanguageSwitch({
       >
         EN
       </button>
+
     </div>
   );
 }
+
 
 /*
  * ======================================================
@@ -1048,6 +1304,27 @@ export default function Layout() {
     setLanguage,
     t,
   } = useLanguage();
+
+
+  /*
+   * ====================================================
+   * SITE SETTINGS STATE
+   * ====================================================
+   */
+
+  const [
+    siteSettings,
+    setSiteSettings,
+  ] = useState(
+    DEFAULT_SITE_SETTINGS
+  );
+
+
+  /*
+   * ====================================================
+   * NAVIGATION STATE
+   * ====================================================
+   */
 
   const [
     open,
@@ -1079,6 +1356,13 @@ export default function Layout() {
     setMobileCompanyOpen,
   ] = useState(false);
 
+
+  /*
+   * ====================================================
+   * PRODUCT MENU STATE
+   * ====================================================
+   */
+
   const [
     productServices,
     setProductServices,
@@ -1094,15 +1378,30 @@ export default function Layout() {
     setProductError,
   ] = useState(false);
 
+
+  /*
+   * ====================================================
+   * REFS
+   * ====================================================
+   */
+
   const headerRef =
     useRef(null);
 
   const companyDropdownRef =
     useRef(null);
 
+
+  /*
+   * ====================================================
+   * ROUTE
+   * ====================================================
+   */
+
   const {
     pathname,
   } = useLocation();
+
 
   const isProductActive =
     pathname.startsWith(
@@ -1114,6 +1413,231 @@ export default function Layout() {
       "/company"
     );
 
+
+  /*
+   * ====================================================
+   * NORMALIZED SITE SETTINGS
+   * ====================================================
+   */
+
+  const companyName =
+    normalizeSettingText(
+      siteSettings.company_name
+    ) ||
+    DEFAULT_SITE_SETTINGS.company_name;
+
+
+  const logoUrl =
+    normalizeSettingText(
+      siteSettings.logo_url
+    ) ||
+    DEFAULT_SITE_SETTINGS.logo_url;
+
+
+  /*
+   * EMAIL
+   */
+
+  const email =
+    normalizeSettingText(
+      siteSettings.email
+    ) ||
+    DEFAULT_SITE_SETTINGS.email;
+
+
+  const emailHref =
+    createEmailHref(
+      email
+    );
+
+
+  /*
+   * PHONE
+   */
+
+  const phone =
+    normalizeSettingText(
+      siteSettings.phone
+    ) ||
+    DEFAULT_SITE_SETTINGS.phone;
+
+
+  const phoneHref =
+    createPhoneHref(
+      phone
+    );
+
+
+  /*
+   * ADDRESS
+   */
+
+  const address =
+    normalizeSettingText(
+      siteSettings.address
+    ) ||
+    DEFAULT_SITE_SETTINGS.address;
+
+
+  /*
+   * GOOGLE MAPS
+   */
+
+  const googleMapsUrl =
+    normalizeExternalUrl(
+      siteSettings.google_maps_url
+    );
+
+
+  /*
+   * WHATSAPP
+   */
+
+  const whatsappNumber =
+    normalizeWhatsAppNumber(
+      siteSettings.whatsapp ||
+        DEFAULT_SITE_SETTINGS.whatsapp
+    );
+
+
+  const whatsappMessage =
+    language === "en"
+      ? "Hello Jasa Medika Transmedic, I would like to get more information about your products and services."
+      : "Halo Jasa Medika Transmedic, saya ingin mendapatkan informasi lebih lanjut mengenai produk dan layanan.";
+
+
+  const whatsappUrl =
+    whatsappNumber
+      ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+          whatsappMessage
+        )}`
+      : "";
+
+
+  /*
+   * SOCIAL MEDIA
+   */
+
+  const instagramUrl =
+    normalizeExternalUrl(
+      siteSettings.instagram_url ||
+        siteSettings.instagram
+    );
+
+
+  const linkedinUrl =
+    normalizeExternalUrl(
+      siteSettings.linkedin_url ||
+        siteSettings.linkedin
+    );
+
+
+  const youtubeUrl =
+    normalizeExternalUrl(
+      siteSettings.youtube_url ||
+        siteSettings.youtube
+    );
+
+
+  const socialLinks = [
+    {
+      name: "Instagram",
+      Icon: Instagram,
+      href: instagramUrl,
+    },
+    {
+      name: "LinkedIn",
+      Icon: Linkedin,
+      href: linkedinUrl,
+    },
+    {
+      name: "YouTube",
+      Icon: Youtube,
+      href: youtubeUrl,
+    },
+  ].filter(
+    (item) =>
+      Boolean(
+        item.href
+      )
+  );
+
+
+  /*
+   * ====================================================
+   * LOAD PUBLIC SITE SETTINGS
+   * ====================================================
+   */
+
+  const loadSiteSettings =
+    useCallback(
+      async () => {
+        try {
+          const data =
+            await getPublicSiteSettings();
+
+
+          const settings =
+            data &&
+            typeof data === "object"
+              ? data
+              : {};
+
+
+          setSiteSettings({
+            ...DEFAULT_SITE_SETTINGS,
+            ...settings,
+
+            instagram_url:
+              normalizeSettingText(
+                settings.instagram_url ||
+                  settings.instagram
+              ),
+
+            linkedin_url:
+              normalizeSettingText(
+                settings.linkedin_url ||
+                  settings.linkedin
+              ),
+
+            youtube_url:
+              normalizeSettingText(
+                settings.youtube_url ||
+                  settings.youtube
+              ),
+
+            google_maps_url:
+              normalizeSettingText(
+                settings.google_maps_url
+              ),
+
+            logo_url:
+              normalizeSettingText(
+                settings.logo_url
+              ) ||
+              DEFAULT_SITE_SETTINGS.logo_url,
+          });
+
+        } catch (error) {
+          console.error(
+            "Site Settings gagal dimuat. Menggunakan fallback:",
+            error
+          );
+
+          setSiteSettings(
+            DEFAULT_SITE_SETTINGS
+          );
+        }
+      },
+      []
+    );
+
+
+  useEffect(() => {
+    loadSiteSettings();
+  }, [loadSiteSettings]);
+
+
   /*
    * ====================================================
    * LOAD PRODUCT MENU
@@ -1121,74 +1645,65 @@ export default function Layout() {
    */
 
   const loadProductMenu =
-  useCallback(
-    async () => {
-      try {
-        setProductLoading(
-          true
-        );
-
-        setProductError(
-          false
-        );
-
-        /*
-         * LanguageContext:
-         *
-         * ID → "id"
-         * EN → "en"
-         */
-        const data =
-          await getProductServicesMegaMenuData(
-            language
+    useCallback(
+      async () => {
+        try {
+          setProductLoading(
+            true
           );
 
-        setProductServices(
-          Array.isArray(
-            data
-          ) &&
-            data.length > 0
-            ? data
-            : fallbackProductNavigation
-        );
-      } catch (error) {
-        console.error(
-          "Product & Services navbar gagal dimuat:",
-          error
-        );
+          setProductError(
+            false
+          );
 
-        /*
-         * Jika query gagal,
-         * fallback Bahasa Indonesia.
-         */
-        setProductServices(
-          fallbackProductNavigation
-        );
 
-        setProductError(
-          true
-        );
-      } finally {
-        setProductLoading(
-          false
-        );
-      }
-    },
+          const data =
+            await getProductServicesMegaMenuData(
+              language
+            );
 
-    /*
-     * PENTING:
-     *
-     * Saat ID / EN berubah,
-     * fungsi dibuat ulang
-     * sehingga data Supabase
-     * dimuat ulang.
-     */
-    [language]
-  );
+
+          setProductServices(
+            Array.isArray(
+              data
+            ) &&
+              data.length > 0
+              ? data
+              : fallbackProductNavigation
+          );
+
+        } catch (error) {
+          console.error(
+            "Product & Services navbar gagal dimuat:",
+            error
+          );
+
+
+          setProductServices(
+            fallbackProductNavigation
+          );
+
+          setProductError(
+            true
+          );
+
+        } finally {
+          setProductLoading(
+            false
+          );
+        }
+      },
+
+      [
+        language,
+      ]
+    );
+
 
   useEffect(() => {
     loadProductMenu();
   }, [loadProductMenu]);
+
 
   /*
    * ====================================================
@@ -1209,8 +1724,12 @@ export default function Layout() {
               ),
           })
         ),
-      [productServices]
+
+      [
+        productServices,
+      ]
     );
+
 
   /*
    * ====================================================
@@ -1242,6 +1761,7 @@ export default function Layout() {
     );
   }, [pathname]);
 
+
   /*
    * ====================================================
    * CLICK OUTSIDE + ESC
@@ -1267,6 +1787,7 @@ export default function Layout() {
         );
       }
 
+
       if (
         companyDropdownRef.current &&
         !companyDropdownRef.current.contains(
@@ -1278,6 +1799,7 @@ export default function Layout() {
         );
       }
     }
+
 
     function handleEscape(
       event
@@ -1308,6 +1830,7 @@ export default function Layout() {
       }
     }
 
+
     document.addEventListener(
       "mousedown",
       handleClickOutside
@@ -1317,6 +1840,7 @@ export default function Layout() {
       "keydown",
       handleEscape
     );
+
 
     return () => {
       document.removeEventListener(
@@ -1330,6 +1854,7 @@ export default function Layout() {
       );
     };
   }, []);
+
 
   /*
    * ====================================================
@@ -1352,6 +1877,7 @@ export default function Layout() {
       false
     );
   }
+
 
   function toggleMobileMenu() {
     const nextOpen =
@@ -1376,6 +1902,7 @@ export default function Layout() {
     }
   }
 
+
   /*
    * ====================================================
    * RENDER
@@ -1384,6 +1911,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen">
+
       {/* ==================================================
           HEADER
       ================================================== */}
@@ -1394,7 +1922,9 @@ export default function Layout() {
         }
         className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur"
       >
+
         <div className="container-jmt flex h-20 items-center justify-between">
+
           {/* LOGO */}
 
           <Link
@@ -1405,17 +1935,39 @@ export default function Layout() {
             className="shrink-0"
           >
             <img
-              src="/logo.webp"
-              alt="Jasa Medika Transmedic"
+              src={
+                logoUrl
+              }
+              alt={
+                companyName
+              }
+              onError={(
+                event
+              ) => {
+                if (
+                  event.currentTarget
+                    .getAttribute(
+                      "src"
+                    ) ===
+                  "/logo.webp"
+                ) {
+                  return;
+                }
+
+                event.currentTarget.src =
+                  "/logo.webp";
+              }}
               className="h-11 w-auto"
             />
           </Link>
+
 
           {/* ==================================================
               DESKTOP NAV
           ================================================== */}
 
           <nav className="hidden items-center gap-7 lg:flex">
+
             {nav.map(
               (item) => {
                 const label =
@@ -1425,6 +1977,7 @@ export default function Layout() {
 
                 const to =
                   item.to;
+
 
                 /*
                  * PRODUCT & SERVICES
@@ -1485,6 +2038,7 @@ export default function Layout() {
                   );
                 }
 
+
                 /*
                  * COMPANY
                  */
@@ -1517,6 +2071,7 @@ export default function Layout() {
                         )
                       }
                     >
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1553,13 +2108,17 @@ export default function Layout() {
                         />
                       </button>
 
+
                       {desktopCompanyOpen && (
                         <div
                           className="absolute left-1/2 top-full z-50 w-72 -translate-x-1/2 pt-5"
                           role="menu"
                         >
+
                           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/10">
+
                             <div className="border-b border-slate-100 px-4 py-3">
+
                               <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">
                                 {t(
                                   "company.title"
@@ -1571,9 +2130,12 @@ export default function Layout() {
                                   "company.description"
                                 )}
                               </p>
+
                             </div>
 
+
                             <div className="mt-2 space-y-1">
+
                               {companyNavigation.map(
                                 (
                                   companyItem
@@ -1602,8 +2164,11 @@ export default function Layout() {
                                           : "hover:bg-slate-50"
                                       }`}
                                     >
+
                                       <div className="flex items-center justify-between gap-3">
+
                                         <div className="min-w-0">
+
                                           <p
                                             className={`text-sm font-semibold ${
                                               isActive
@@ -1616,12 +2181,15 @@ export default function Layout() {
                                             )}
                                           </p>
 
+
                                           <p className="mt-1 text-xs leading-5 text-slate-400">
                                             {t(
                                               `company.${companyItem.key}Description`
                                             )}
                                           </p>
+
                                         </div>
+
 
                                         <ArrowRight
                                           size={
@@ -1633,18 +2201,25 @@ export default function Layout() {
                                               : "text-slate-300 group-hover:text-orange"
                                           }`}
                                         />
+
                                       </div>
+
                                     </Link>
                                   );
                                 }
                               )}
+
                             </div>
+
                           </div>
+
                         </div>
                       )}
+
                     </div>
                   );
                 }
+
 
                 /*
                  * NORMAL NAV
@@ -1682,13 +2257,16 @@ export default function Layout() {
                 );
               }
             )}
+
           </nav>
+
 
           {/* ==================================================
               LANGUAGE + CONTACT
           ================================================== */}
 
           <div className="hidden items-center gap-3 lg:flex">
+
             <LanguageSwitch
               language={
                 language
@@ -1700,6 +2278,7 @@ export default function Layout() {
                 t
               }
             />
+
 
             <Link
               to="/contact"
@@ -1722,7 +2301,9 @@ export default function Layout() {
                 size={16}
               />
             </Link>
+
           </div>
+
 
           {/* MOBILE BUTTON */}
 
@@ -1749,13 +2330,16 @@ export default function Layout() {
               <Menu />
             )}
           </button>
+
         </div>
+
 
         {/* ==================================================
             DESKTOP PRODUCT MEGA MENU
         ================================================== */}
 
         {desktopProductOpen && (
+
           <div
             className="absolute left-0 top-full hidden w-full border-t border-slate-100 bg-white/95 shadow-[0_24px_80px_rgba(2,6,23,0.12)] backdrop-blur-xl lg:block"
             onMouseEnter={() =>
@@ -1769,20 +2353,28 @@ export default function Layout() {
               )
             }
           >
+
             <div className="max-h-[calc(100vh-5rem)] overflow-y-auto">
+
               <div className="container-jmt py-6">
+
                 {/* HEADER */}
 
                 <div className="relative mb-5 overflow-hidden rounded-[24px] bg-[#082B3A] px-6 py-5 text-white lg:px-7">
+
                   <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange/10 blur-3xl" />
 
+
                   <div className="relative flex items-center justify-between gap-8">
+
                     <div className="min-w-0">
+
                       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-orange">
                         {t(
                           "servicesMenu.eyebrow"
                         )}
                       </p>
+
 
                       <h2 className="mt-2 text-xl font-bold leading-tight lg:text-2xl">
                         {t(
@@ -1790,12 +2382,15 @@ export default function Layout() {
                         )}
                       </h2>
 
+
                       <p className="mt-2 max-w-3xl text-xs leading-6 text-white/60">
                         {t(
                           "servicesMenu.description"
                         )}
                       </p>
+
                     </div>
+
 
                     <Link
                       to="/services"
@@ -1815,13 +2410,18 @@ export default function Layout() {
                         className="transition-transform group-hover:translate-x-0.5"
                       />
                     </Link>
+
                   </div>
+
                 </div>
+
 
                 {/* LOADING */}
 
                 {productLoading ? (
+
                   <div className="flex items-center justify-center py-14">
+
                     <LoaderCircle
                       size={27}
                       className="animate-spin text-orange"
@@ -1832,18 +2432,25 @@ export default function Layout() {
                         "servicesMenu.loading"
                       )}
                     </span>
+
                   </div>
+
                 ) : (
+
                   <>
+
                     {/* ERROR */}
 
                     {productError && (
+
                       <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3">
+
                         <p className="text-xs leading-6 text-amber-700">
                           {t(
                             "servicesMenu.temporaryData"
                           )}
                         </p>
+
 
                         <button
                           type="button"
@@ -1860,25 +2467,18 @@ export default function Layout() {
                             "servicesMenu.reload"
                           )}
                         </button>
+
                       </div>
+
                     )}
 
-                    {/* ======================================
-                        FINAL DESKTOP LAYOUT
 
-                        LEFT
-                        01 SIMRS
-
-                        RIGHT
-                        02
-                        03
-                        04
-                    ====================================== */}
+                    {/* FINAL DESKTOP LAYOUT */}
 
                     <div className="grid items-stretch gap-4 lg:grid-cols-[1.08fr_.92fr]">
-                      {/* LEFT */}
 
                       <div className="h-full">
+
                         {productMenuData[0] && (
                           <ProductServiceCard
                             service={
@@ -1896,11 +2496,12 @@ export default function Layout() {
                             }
                           />
                         )}
+
                       </div>
 
-                      {/* RIGHT */}
 
                       <div className="space-y-4">
+
                         {productMenuData
                           .slice(1)
                           .map(
@@ -1917,8 +2518,7 @@ export default function Layout() {
                                   service
                                 }
                                 serviceNumber={String(
-                                  index +
-                                    2
+                                  index + 2
                                 ).padStart(
                                   2,
                                   "0"
@@ -1935,26 +2535,40 @@ export default function Layout() {
                               />
                             )
                           )}
+
                       </div>
+
                     </div>
+
                   </>
+
                 )}
+
               </div>
+
             </div>
+
           </div>
+
         )}
+
 
         {/* ==================================================
             MOBILE NAV
         ================================================== */}
 
         {open && (
+
           <div className="max-h-[calc(100vh-5rem)] overflow-y-auto border-t border-slate-100 bg-white px-5 py-5 shadow-lg lg:hidden">
+
             <nav className="container-jmt flex flex-col gap-1 px-0">
-              {/* LANGUAGE MOBILE */}
+
+              {/* LANGUAGE */}
 
               <div className="mb-4 rounded-2xl border border-slate-100 bg-slate-50 p-3">
+
                 <div className="mb-2 flex items-center justify-between gap-3">
+
                   <div>
                     <p className="text-xs font-bold text-[#082B3A]">
                       {t(
@@ -1969,12 +2583,15 @@ export default function Layout() {
                     </p>
                   </div>
 
+
                   <span className="rounded-full bg-orange/10 px-2.5 py-1 text-[9px] font-bold uppercase text-orange">
                     {
                       language
                     }
                   </span>
+
                 </div>
+
 
                 <LanguageSwitch
                   language={
@@ -1988,7 +2605,9 @@ export default function Layout() {
                   }
                   compact
                 />
+
               </div>
+
 
               {nav.map(
                 (item) => {
@@ -1999,6 +2618,7 @@ export default function Layout() {
 
                   const to =
                     item.to;
+
 
                   /*
                    * PRODUCT MOBILE
@@ -2014,6 +2634,7 @@ export default function Layout() {
                           to
                         }
                       >
+
                         <button
                           type="button"
                           onClick={() => {
@@ -2051,8 +2672,11 @@ export default function Layout() {
                           />
                         </button>
 
+
                         {mobileProductOpen && (
+
                           <div className="mt-2 space-y-2 rounded-2xl bg-slate-50 p-2">
+
                             <Link
                               to="/services"
                               onClick={
@@ -2069,14 +2693,18 @@ export default function Layout() {
                               />
                             </Link>
 
+
                             {productLoading ? (
+
                               <div className="flex items-center justify-center py-8">
                                 <LoaderCircle
                                   size={22}
                                   className="animate-spin text-orange"
                                 />
                               </div>
+
                             ) : (
+
                               productMenuData.map(
                                 (
                                   service,
@@ -2088,12 +2716,12 @@ export default function Layout() {
 
                                   const number =
                                     String(
-                                      index +
-                                        1
+                                      index + 1
                                     ).padStart(
                                       2,
                                       "0"
                                     );
+
 
                                   /*
                                    * INFRASTRUCTURE
@@ -2116,11 +2744,13 @@ export default function Layout() {
                                         }
                                         className="group flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3.5 transition hover:border-orange-200 hover:bg-orange-50/50"
                                       >
+
                                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-400 transition group-hover:bg-orange/10 group-hover:text-orange">
                                           {
                                             number
                                           }
                                         </div>
+
 
                                         <span className="min-w-0 flex-1 text-sm font-bold leading-6 text-[#082B3A]">
                                           {
@@ -2128,15 +2758,16 @@ export default function Layout() {
                                           }
                                         </span>
 
+
                                         <ArrowRight
-                                          size={
-                                            15
-                                          }
+                                          size={15}
                                           className="shrink-0 text-orange"
                                         />
+
                                       </Link>
                                     );
                                   }
+
 
                                   /*
                                    * NORMAL SERVICE MOBILE
@@ -2150,6 +2781,7 @@ export default function Layout() {
                                       }
                                       className="overflow-hidden rounded-xl border border-slate-100 bg-white"
                                     >
+
                                       <button
                                         type="button"
                                         onClick={() =>
@@ -2168,11 +2800,13 @@ export default function Layout() {
                                           serviceOpen
                                         }
                                       >
+
                                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[10px] font-bold text-slate-400">
                                           {
                                             number
                                           }
                                         </div>
+
 
                                         <span className="min-w-0 flex-1 text-sm font-bold leading-6 text-[#082B3A]">
                                           {
@@ -2180,20 +2814,23 @@ export default function Layout() {
                                           }
                                         </span>
 
+
                                         <ChevronDown
-                                          size={
-                                            16
-                                          }
+                                          size={16}
                                           className={`mt-1 shrink-0 text-orange transition-transform duration-200 ${
                                             serviceOpen
                                               ? "rotate-180"
                                               : ""
                                           }`}
                                         />
+
                                       </button>
 
+
                                       {serviceOpen && (
+
                                         <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+
                                           <Link
                                             to={`/services/${service.slug}`}
                                             onClick={
@@ -2206,13 +2843,10 @@ export default function Layout() {
                                             )}
 
                                             <ArrowRight
-                                              size={
-                                                13
-                                              }
+                                              size={13}
                                             />
                                           </Link>
 
-                                          {/* GROUPS */}
 
                                           {service.menu.groups.map(
                                             (
@@ -2240,7 +2874,6 @@ export default function Layout() {
                                             )
                                           )}
 
-                                          {/* STANDALONE */}
 
                                           {service.menu.standalone.length >
                                             0 && (
@@ -2252,6 +2885,7 @@ export default function Layout() {
                                                   : ""
                                               }
                                             >
+
                                               {service.menu.standalone.map(
                                                 (
                                                   feature
@@ -2273,33 +2907,39 @@ export default function Layout() {
                                                   />
                                                 )
                                               )}
+
                                             </div>
                                           )}
 
-                                          {/* EMPTY */}
 
-                                          {service.menu.groups.length ===
-                                            0 &&
-                                            service.menu.standalone.length ===
-                                              0 && (
+                                          {service.menu.groups.length === 0 &&
+                                            service.menu.standalone.length === 0 && (
                                               <p className="text-xs leading-6 text-slate-400">
                                                 {t(
                                                   "servicesMenu.detailAvailable"
                                                 )}
                                               </p>
                                             )}
+
                                         </div>
+
                                       )}
+
                                     </div>
                                   );
                                 }
                               )
+
                             )}
+
                           </div>
+
                         )}
+
                       </div>
                     );
                   }
+
 
                   /*
                    * COMPANY MOBILE
@@ -2315,6 +2955,7 @@ export default function Layout() {
                           to
                         }
                       >
+
                         <button
                           type="button"
                           onClick={() => {
@@ -2356,8 +2997,11 @@ export default function Layout() {
                           />
                         </button>
 
+
                         {mobileCompanyOpen && (
+
                           <div className="ml-4 mt-1 space-y-1 border-l-2 border-orange/20 pl-3">
+
                             {companyNavigation.map(
                               (
                                 companyItem
@@ -2390,11 +3034,15 @@ export default function Layout() {
                                 );
                               }
                             )}
+
                           </div>
+
                         )}
+
                       </div>
                     );
                   }
+
 
                   /*
                    * NORMAL MOBILE NAV
@@ -2423,10 +3071,15 @@ export default function Layout() {
                   );
                 }
               )}
+
             </nav>
+
           </div>
+
         )}
+
       </header>
+
 
       {/* ==================================================
           MAIN
@@ -2436,18 +3089,80 @@ export default function Layout() {
         <Outlet />
       </main>
 
+
+      {/* ==================================================
+          FLOATING WHATSAPP
+      ================================================== */}
+
+      {whatsappUrl && (
+        <a
+          href={
+            whatsappUrl
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={
+            language === "en"
+              ? "Contact Jasa Medika Transmedic via WhatsApp"
+              : "Hubungi Jasa Medika Transmedic melalui WhatsApp"
+          }
+          title={
+            language === "en"
+              ? "Chat with us on WhatsApp"
+              : "Chat dengan kami melalui WhatsApp"
+          }
+          className="group fixed bottom-6 right-6 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_10px_30px_rgba(0,0,0,0.22)] transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:bg-[#20bd5a] hover:shadow-[0_14px_36px_rgba(0,0,0,0.28)] focus:outline-none focus:ring-4 focus:ring-[#25D366]/25"
+        >
+          <MessageCircle
+            size={28}
+            strokeWidth={2}
+          />
+
+          <span className="sr-only">
+            WhatsApp
+          </span>
+        </a>
+      )}
+
+
       {/* ==================================================
           FOOTER
       ================================================== */}
 
       <footer className="bg-ink text-white">
+
         <div className="container-jmt grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
+
+          {/* COMPANY */}
+
           <div className="lg:col-span-2">
+
             <img
-              src="/logo.webp"
-              alt="Jasa Medika Transmedic"
+              src={
+                logoUrl
+              }
+              alt={
+                companyName
+              }
+              onError={(
+                event
+              ) => {
+                if (
+                  event.currentTarget
+                    .getAttribute(
+                      "src"
+                    ) ===
+                  "/logo.webp"
+                ) {
+                  return;
+                }
+
+                event.currentTarget.src =
+                  "/logo.webp";
+              }}
               className="mb-5 h-12 rounded bg-white px-3 py-2"
             />
+
 
             <p className="max-w-lg text-sm leading-7 text-slate-300">
               {t(
@@ -2455,41 +3170,66 @@ export default function Layout() {
               )}
             </p>
 
-            <div className="mt-6 flex gap-3">
-              {[
-                Instagram,
-                Linkedin,
-              ].map(
-                (
-                  Icon,
-                  index
-                ) => (
-                  <a
-                    key={
-                      index
-                    }
-                    href="#"
-                    className="rounded-lg border border-white/15 p-2.5 transition hover:border-orange hover:text-orange"
-                  >
-                    <Icon
-                      size={18}
-                    />
-                  </a>
-                )
-              )}
-            </div>
+
+            {/* SOCIAL MEDIA */}
+
+            {socialLinks.length > 0 && (
+              <div className="mt-6 flex items-center gap-3">
+
+                {socialLinks.map(
+                  ({
+                    name,
+                    Icon,
+                    href,
+                  }) => (
+                    <a
+                      key={
+                        name
+                      }
+                      href={
+                        href
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={
+                        name
+                      }
+                      title={
+                        name
+                      }
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-orange hover:bg-white/5 hover:text-orange"
+                    >
+                      <Icon
+                        size={20}
+                        strokeWidth={
+                          1.8
+                        }
+                      />
+                    </a>
+                  )
+                )}
+
+              </div>
+            )}
+
           </div>
 
-          {/* QUICK LINKS */}
+
+          {/* ==================================================
+              QUICK LINKS
+          ================================================== */}
 
           <div>
+
             <h3 className="mb-4 font-semibold">
               {t(
                 "footer.quickLinks"
               )}
             </h3>
 
+
             <div className="space-y-3 text-sm text-slate-300">
+
               {nav
                 .slice(1)
                 .map(
@@ -2511,64 +3251,183 @@ export default function Layout() {
                     </Link>
                   )
                 )}
+
             </div>
+
           </div>
 
-          {/* CONTACT */}
+
+          {/* ==================================================
+              CONTACT
+          ================================================== */}
 
           <div>
+
             <h3 className="mb-4 font-semibold">
               {t(
                 "footer.contact"
               )}
             </h3>
 
+
             <div className="space-y-4 text-sm text-slate-300">
-              <p className="flex gap-3">
-                <MapPin
-                  size={18}
-                  className="mt-1 shrink-0 text-orange"
-                />
 
-                Gedung Paramarta
-                Tridharma, Jl.
-                Cikutra Baru Raya
-                No. 28, Bandung
-                40124
-              </p>
+              {/* ADDRESS */}
 
-              <p className="flex items-center gap-3">
-                <Phone
-                  size={18}
-                  className="text-orange"
-                />
+              {address && (
+                <>
+                  {googleMapsUrl ? (
+                    <a
+                      href={
+                        googleMapsUrl
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={
+                        language === "en"
+                          ? "Open JMT location in Google Maps"
+                          : "Buka lokasi JMT di Google Maps"
+                      }
+                      title={
+                        language === "en"
+                          ? "Open in Google Maps"
+                          : "Buka di Google Maps"
+                      }
+                      className="group flex gap-3 transition hover:text-orange"
+                    >
+                      <MapPin
+                        size={18}
+                        className="mt-1 shrink-0 text-orange"
+                      />
 
-                +62 878 7000
-                7781
-              </p>
+                      <span className="leading-6">
+                        {
+                          address
+                        }
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="flex gap-3">
+                      <MapPin
+                        size={18}
+                        className="mt-1 shrink-0 text-orange"
+                      />
 
-              <p className="flex items-center gap-3">
-                <Mail
-                  size={18}
-                  className="text-orange"
-                />
+                      <span className="leading-6">
+                        {
+                          address
+                        }
+                      </span>
+                    </p>
+                  )}
+                </>
+              )}
 
-                info@jasamedikatransmedic.com
-              </p>
+
+              {/* PHONE */}
+
+              {phone && (
+                <>
+                  {phoneHref ? (
+                    <a
+                      href={
+                        phoneHref
+                      }
+                      className="flex items-center gap-3 transition hover:text-orange"
+                    >
+                      <Phone
+                        size={18}
+                        className="shrink-0 text-orange"
+                      />
+
+                      <span>
+                        {
+                          phone
+                        }
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="flex items-center gap-3">
+                      <Phone
+                        size={18}
+                        className="shrink-0 text-orange"
+                      />
+
+                      <span>
+                        {
+                          phone
+                        }
+                      </span>
+                    </p>
+                  )}
+                </>
+              )}
+
+
+              {/* EMAIL */}
+
+              {email && (
+                <>
+                  {emailHref ? (
+                    <a
+                      href={
+                        emailHref
+                      }
+                      className="flex items-center gap-3 transition hover:text-orange"
+                    >
+                      <Mail
+                        size={18}
+                        className="shrink-0 text-orange"
+                      />
+
+                      <span className="break-all">
+                        {
+                          email
+                        }
+                      </span>
+                    </a>
+                  ) : (
+                    <p className="flex items-center gap-3">
+                      <Mail
+                        size={18}
+                        className="shrink-0 text-orange"
+                      />
+
+                      <span className="break-all">
+                        {
+                          email
+                        }
+                      </span>
+                    </p>
+                  )}
+                </>
+              )}
+
             </div>
+
           </div>
+
         </div>
 
+
+        {/* ==================================================
+            COPYRIGHT
+        ================================================== */}
+
         <div className="border-t border-white/10 py-5 text-center text-xs text-slate-400">
+
           ©{" "}
           {new Date().getFullYear()}{" "}
-          PT Jasa Medika
-          Transmedic.{" "}
+          {companyName}.{" "}
+
           {t(
             "footer.rights"
           )}
+
         </div>
+
       </footer>
+
     </div>
   );
 }

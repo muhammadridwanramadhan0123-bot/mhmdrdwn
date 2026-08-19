@@ -11,11 +11,13 @@ import Layout from "./components/Layout";
 import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
 
+
 /* =========================
    HALAMAN PUBLIK
 ========================= */
 
 import HomePage from "./pages/HomePage";
+
 import ServicesPage from "./pages/ServicesPage";
 import ServiceDetailPage from "./pages/ServiceDetailPage";
 import InfrastructureServicePage from "./pages/InfrastructureServicePage";
@@ -35,12 +37,14 @@ import CompanyPartnersPage from "./pages/company/CompanyPartnersPage";
 import CompanyLocationPage from "./pages/company/CompanyLocationPage";
 import CompanyCareerPage from "./pages/company/CompanyCareerPage";
 
+
 /* =========================
    LOGIN DAN DASHBOARD
 ========================= */
 
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+
 
 /* =========================
    PORTFOLIO ADMIN
@@ -50,6 +54,7 @@ import AdminPortfolioPage from "./pages/admin/AdminPortfolioPage";
 import AdminPortfolioCreatePage from "./pages/admin/AdminPortfolioCreatePage";
 import AdminPortfolioEditPage from "./pages/admin/AdminPortfolioEditPage";
 
+
 /* =========================
    INSIGHT ADMIN
 ========================= */
@@ -57,6 +62,7 @@ import AdminPortfolioEditPage from "./pages/admin/AdminPortfolioEditPage";
 import AdminInsightPage from "./pages/admin/AdminInsightPage";
 import AdminInsightCreatePage from "./pages/admin/AdminInsightCreatePage";
 import AdminInsightEditPage from "./pages/admin/AdminInsightEditPage";
+
 
 /* =========================
    SERVICES ADMIN
@@ -67,12 +73,14 @@ import AdminServiceCreatePage from "./pages/admin/AdminServiceCreatePage";
 import AdminServiceEditPage from "./pages/admin/AdminServiceEditPage";
 import AdminServicePagePreview from "./pages/admin/AdminServicePagePreview";
 
+
 /* =========================
    PESAN MASUK
 ========================= */
 
 import AdminContactMessagePage from "./pages/admin/AdminContactMessagePage";
 import AdminContactMessageDetailPage from "./pages/admin/AdminContactMessageDetailPage";
+
 
 /* =========================
    COMPANY MANAGEMENT
@@ -87,12 +95,22 @@ import AdminCompanyCareersPage from "./pages/admin/AdminCompanyCareersPage";
 import AdminCompanyCertificationsPage from "./pages/admin/AdminCompanyCertificationsPage";
 import AdminCompanyAwardsPage from "./pages/admin/AdminCompanyAwardsPage";
 
+
+/* =========================
+   SITE SETTINGS ADMIN
+========================= */
+
+import AdminSiteSettingsPage from "./pages/admin/AdminSiteSettingsPage";
+
+
 /* =========================
    SCROLL TO TOP
 ========================= */
 
 function ScrollTop() {
-  const { pathname } = useLocation();
+  const {
+    pathname,
+  } = useLocation();
 
   useEffect(() => {
     window.scrollTo({
@@ -104,6 +122,7 @@ function ScrollTop() {
   return null;
 }
 
+
 /* =========================
    APP
 ========================= */
@@ -114,53 +133,82 @@ export default function App() {
       <ScrollTop />
 
       <Routes>
+
         {/* =========================
             WEBSITE PUBLIK
         ========================== */}
 
-        <Route element={<Layout />}>
+        <Route
+          element={
+            <Layout />
+          }
+        >
+
           {/* HOME */}
 
           <Route
             path="/"
-            element={<HomePage />}
+            element={
+              <HomePage />
+            }
           />
 
-          {/* PRODUCT & SERVICES */}
+
+          {/* =========================
+              PRODUCT & SERVICES
+          ========================== */}
 
           <Route
             path="/services"
-            element={<ServicesPage />}
+            element={
+              <ServicesPage />
+            }
           />
 
           <Route
             path="/services/:serviceSlug/features/:featureSlug"
-            element={<ServiceFeatureDetailPage />}
+            element={
+              <ServiceFeatureDetailPage />
+            }
           />
 
           <Route
-           path="/services/infrastruktur-it-layanan-pendukung"
-           element={<InfrastructureServicePage />}
+            path="/services/infrastruktur-it-layanan-pendukung"
+            element={
+              <InfrastructureServicePage />
+            }
           />
 
           <Route
             path="/services/:slug"
-            element={<ServiceDetailPage />}
+            element={
+              <ServiceDetailPage />
+            }
           />
 
-          {/* PORTFOLIO */}
+
+          {/* =========================
+              PORTFOLIO
+          ========================== */}
 
           <Route
             path="/portfolio"
-            element={<PortfolioPage />}
+            element={
+              <PortfolioPage />
+            }
           />
 
           <Route
             path="/portfolio/:slug"
-            element={<PortfolioDetailPage />}
+            element={
+              <PortfolioDetailPage />
+            }
           />
 
-          {/* COMPANY */}
+
+          {/* =========================
+              COMPANY
+          ========================== */}
 
           <Route
             path="/company"
@@ -174,48 +222,72 @@ export default function App() {
 
           <Route
             path="/company/about-us"
-            element={<CompanyAboutPage />}
+            element={
+              <CompanyAboutPage />
+            }
           />
 
           <Route
             path="/company/milestone"
-            element={<CompanyMilestonePage />}
+            element={
+              <CompanyMilestonePage />
+            }
           />
 
           <Route
             path="/company/partners"
-            element={<CompanyPartnersPage />}
+            element={
+              <CompanyPartnersPage />
+            }
           />
 
           <Route
             path="/company/location"
-            element={<CompanyLocationPage />}
+            element={
+              <CompanyLocationPage />
+            }
           />
 
           <Route
             path="/company/career"
-            element={<CompanyCareerPage />}
+            element={
+              <CompanyCareerPage />
+            }
           />
 
-          {/* INSIGHT */}
+
+          {/* =========================
+              INSIGHT
+          ========================== */}
 
           <Route
             path="/insight"
-            element={<InsightPage />}
+            element={
+              <InsightPage />
+            }
           />
 
           <Route
             path="/insight/:slug"
-            element={<InsightDetailPage />}
+            element={
+              <InsightDetailPage />
+            }
           />
 
-          {/* CONTACT */}
+
+          {/* =========================
+              CONTACT
+          ========================== */}
 
           <Route
             path="/contact"
-            element={<ContactPage />}
+            element={
+              <ContactPage />
+            }
           />
+
         </Route>
+
 
         {/* =========================
             LOGIN ADMIN
@@ -223,21 +295,25 @@ export default function App() {
 
         <Route
           path="/admin/login"
-          element={<AdminLoginPage />}
+          element={
+            <AdminLoginPage />
+          }
         />
 
-        {/* =========================
-    FULL SCREEN ADMIN PREVIEW
-========================== */}
 
-<Route
-  path="/admin/services/preview/:id"
-  element={
-    <ProtectedAdminRoute>
-      <AdminServicePagePreview />
-    </ProtectedAdminRoute>
-  }
-/>
+        {/* =========================
+            FULL SCREEN ADMIN PREVIEW
+        ========================== */}
+
+        <Route
+          path="/admin/services/preview/:id"
+          element={
+            <ProtectedAdminRoute>
+              <AdminServicePagePreview />
+            </ProtectedAdminRoute>
+          }
+        />
+
 
         {/* =========================
             DASHBOARD ADMIN
@@ -251,12 +327,16 @@ export default function App() {
             </ProtectedAdminRoute>
           }
         >
+
           {/* DASHBOARD */}
 
           <Route
             index
-            element={<AdminDashboardPage />}
+            element={
+              <AdminDashboardPage />
+            }
           />
+
 
           {/* =========================
               PORTFOLIO
@@ -264,18 +344,25 @@ export default function App() {
 
           <Route
             path="portfolio"
-            element={<AdminPortfolioPage />}
+            element={
+              <AdminPortfolioPage />
+            }
           />
 
           <Route
             path="portfolio/create"
-            element={<AdminPortfolioCreatePage />}
+            element={
+              <AdminPortfolioCreatePage />
+            }
           />
 
           <Route
             path="portfolio/edit/:id"
-            element={<AdminPortfolioEditPage />}
+            element={
+              <AdminPortfolioEditPage />
+            }
           />
+
 
           {/* =========================
               INSIGHT
@@ -283,18 +370,25 @@ export default function App() {
 
           <Route
             path="insight"
-            element={<AdminInsightPage />}
+            element={
+              <AdminInsightPage />
+            }
           />
 
           <Route
             path="insight/create"
-            element={<AdminInsightCreatePage />}
+            element={
+              <AdminInsightCreatePage />
+            }
           />
 
           <Route
             path="insight/edit/:id"
-            element={<AdminInsightEditPage />}
+            element={
+              <AdminInsightEditPage />
+            }
           />
+
 
           {/* =========================
               SERVICES
@@ -302,33 +396,44 @@ export default function App() {
 
           <Route
             path="services"
-            element={<AdminServicePage />}
+            element={
+              <AdminServicePage />
+            }
           />
 
           <Route
             path="services/create"
-            element={<AdminServiceCreatePage />}
+            element={
+              <AdminServiceCreatePage />
+            }
           />
 
           <Route
             path="services/edit/:id"
-            element={<AdminServiceEditPage />}
+            element={
+              <AdminServiceEditPage />
+            }
           />
 
-          
+
           {/* =========================
               PESAN MASUK
           ========================== */}
 
           <Route
             path="messages"
-            element={<AdminContactMessagePage />}
+            element={
+              <AdminContactMessagePage />
+            }
           />
 
           <Route
             path="messages/:id"
-            element={<AdminContactMessageDetailPage />}
+            element={
+              <AdminContactMessageDetailPage />
+            }
           />
+
 
           {/* =========================
               COMPANY MANAGEMENT
@@ -336,43 +441,60 @@ export default function App() {
 
           <Route
             path="company"
-            element={<AdminCompanyPage />}
+            element={
+              <AdminCompanyPage />
+            }
           />
 
           <Route
             path="company/about-us"
-            element={<AdminCompanyAboutPage />}
+            element={
+              <AdminCompanyAboutPage />
+            }
           />
 
           <Route
             path="company/location"
-            element={<AdminCompanyLocationPage />}
+            element={
+              <AdminCompanyLocationPage />
+            }
           />
 
           <Route
             path="company/milestones"
-            element={<AdminCompanyMilestonesPage />}
+            element={
+              <AdminCompanyMilestonesPage />
+            }
           />
 
           <Route
             path="company/partners"
-            element={<AdminCompanyPartnersPage />}
+            element={
+              <AdminCompanyPartnersPage />
+            }
           />
 
           <Route
             path="company/careers"
-            element={<AdminCompanyCareersPage />}
+            element={
+              <AdminCompanyCareersPage />
+            }
           />
 
           <Route
             path="company/certifications"
-            element={<AdminCompanyCertificationsPage />}
+            element={
+              <AdminCompanyCertificationsPage />
+            }
           />
 
           <Route
             path="company/awards"
-            element={<AdminCompanyAwardsPage />}
+            element={
+              <AdminCompanyAwardsPage />
+            }
           />
+
 
           {/* COMPANY ADMIN FALLBACK */}
 
@@ -385,7 +507,21 @@ export default function App() {
               />
             }
           />
+
+
+          {/* =========================
+              SITE SETTINGS
+          ========================== */}
+
+          <Route
+            path="settings"
+            element={
+              <AdminSiteSettingsPage />
+            }
+          />
+
         </Route>
+
 
         {/* =========================
             ROUTE TIDAK DITEMUKAN
@@ -400,6 +536,7 @@ export default function App() {
             />
           }
         />
+
       </Routes>
     </>
   );
