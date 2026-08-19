@@ -84,8 +84,39 @@ export const insights = [
 ];
 
 export const stats = [
-  ["22+", "Years of Excellence"],
-  ["500+", "Projects Completed"],
-  ["300+", "Healthcare Partners"],
-  ["1000+", "Professionals"],
+  {
+    value: "22+",
+
+    label: {
+      id: "Tahun Pengalaman",
+      en: "Years of Excellence",
+    },
+  },
+
+  {
+    value: "500+",
+
+    label: {
+      id: "Proyek Diselesaikan",
+      en: "Projects Completed",
+    },
+  },
+
+  {
+    value: "300+",
+
+    label: {
+      id: "Mitra Fasilitas Kesehatan",
+      en: "Healthcare Partners",
+    },
+  },
+
+  {
+    value: "1000+",
+
+    label: {
+      id: "Tenaga Profesional",
+      en: "Professionals",
+    },
+  },
 ];

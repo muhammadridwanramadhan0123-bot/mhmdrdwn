@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -12,6 +13,7 @@ import {
   Eye,
   EyeOff,
   ImageIcon,
+  Layers3,
   LoaderCircle,
   Plus,
   RefreshCw,
@@ -22,6 +24,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+
 import { Link } from "react-router-dom";
 
 import { useAdminAuth } from "../../contexts/AdminAuthContext";
@@ -32,6 +35,10 @@ import {
   getAdminServiceFeatures,
   updateServiceFeature,
 } from "../../services/serviceService";
+
+/* ======================================================
+   CONFIG
+====================================================== */
 
 const STATUS_OPTIONS = [
   {
@@ -48,6 +55,38 @@ const STATUS_OPTIONS = [
   },
 ];
 
+const SERVICE_GROUP_OPTIONS = {
+  "simrs-erp": [
+    {
+      name: "Solusi Klinis & Pelayanan Pasien",
+      order: 1,
+    },
+    {
+      name: "Operasional & Manajemen Rumah Sakit",
+      order: 2,
+    },
+    {
+      name: "TransHealthcare Ecosystem",
+      order: 3,
+    },
+  ],
+
+  "infrastruktur-it-layanan-pendukung": [
+  {
+    name: "Penyedia Perangkat Keras",
+    order: 1,
+  },
+  {
+    name: "Penyedia Perangkat Lunak & Lisensi",
+    order: 2,
+  },
+  {
+    name: "Konsultasi & Implementasi Jaringan",
+    order: 3,
+  },
+],
+};
+
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -57,16 +96,35 @@ const ALLOWED_IMAGE_TYPES = [
 const MAX_IMAGE_SIZE =
   2 * 1024 * 1024;
 
+/* ======================================================
+   HELPERS
+====================================================== */
+
+function getUngroupedGroupOrder(serviceSlug) {
+  return serviceSlug === "simrs-erp"
+    ? 4
+    : 0;
+}
+
 function createInitialFormData(
-  sortOrder = 0
+  sortOrder = 0,
+  groupOrder = 0
 ) {
   return {
+    group_name: "",
+    group_order: groupOrder,
+    parent_feature_id: "",
+
     name: "",
     slug: "",
+
     short_description: "",
     full_description: "",
+
     image_url: "",
+
     sort_order: sortOrder,
+
     status: "draft",
   };
 }
@@ -85,9 +143,98 @@ function createSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function sortFeatureRecords(items) {
-  return [...items].sort(
-    (firstItem, secondItem) => {
+function sortFeatureRecords(
+  items = []
+) {
+  const records = [...items];
+
+  const byId = new Map(
+    records.map((item) => [
+      item.id,
+      item,
+    ])
+  );
+
+  return records.sort(
+    (
+      firstItem,
+      secondItem
+    ) => {
+      const firstGroup =
+        Number(
+          firstItem.group_order
+        ) || 0;
+
+      const secondGroup =
+        Number(
+          secondItem.group_order
+        ) || 0;
+
+      if (
+        firstGroup !==
+        secondGroup
+      ) {
+        return (
+          firstGroup -
+          secondGroup
+        );
+      }
+
+      const firstParent =
+        firstItem.parent_feature_id
+          ? byId.get(
+              firstItem.parent_feature_id
+            )
+          : null;
+
+      const secondParent =
+        secondItem.parent_feature_id
+          ? byId.get(
+              secondItem.parent_feature_id
+            )
+          : null;
+
+      const firstRootOrder =
+        Number(
+          firstParent?.sort_order ??
+            firstItem.sort_order
+        ) || 0;
+
+      const secondRootOrder =
+        Number(
+          secondParent?.sort_order ??
+            secondItem.sort_order
+        ) || 0;
+
+      if (
+        firstRootOrder !==
+        secondRootOrder
+      ) {
+        return (
+          firstRootOrder -
+          secondRootOrder
+        );
+      }
+
+      const firstIsChild =
+        Boolean(
+          firstItem.parent_feature_id
+        );
+
+      const secondIsChild =
+        Boolean(
+          secondItem.parent_feature_id
+        );
+
+      if (
+        firstIsChild !==
+        secondIsChild
+      ) {
+        return firstIsChild
+          ? 1
+          : -1;
+      }
+
       const firstOrder =
         Number(
           firstItem.sort_order
@@ -99,10 +246,12 @@ function sortFeatureRecords(items) {
         ) || 0;
 
       if (
-        firstOrder !== secondOrder
+        firstOrder !==
+        secondOrder
       ) {
         return (
-          firstOrder - secondOrder
+          firstOrder -
+          secondOrder
         );
       }
 
@@ -126,7 +275,9 @@ function formatUpdatedAt(value) {
   const date = new Date(value);
 
   if (
-    Number.isNaN(date.getTime())
+    Number.isNaN(
+      date.getTime()
+    )
   ) {
     return "Belum tersedia";
   }
@@ -137,61 +288,37 @@ function formatUpdatedAt(value) {
       day: "2-digit",
       month: "short",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     }
   ).format(date);
 }
 
 function getStatusLabel(status) {
-  switch (status) {
-    case "published":
-      return "Published";
-
-    case "archived":
-      return "Archived";
-
-    default:
-      return "Draft";
+  if (status === "published") {
+    return "Published";
   }
+
+  if (status === "archived") {
+    return "Archived";
+  }
+
+  return "Draft";
 }
 
 function getStatusClass(status) {
-  switch (status) {
-    case "published":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-
-    case "archived":
-      return "border-slate-300 bg-slate-100 text-slate-700";
-
-    default:
-      return "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "published") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
+
+  if (status === "archived") {
+    return "border-slate-300 bg-slate-100 text-slate-600";
+  }
+
+  return "border-amber-200 bg-amber-50 text-amber-700";
 }
 
-function LoadingSection() {
-  return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-center py-14">
-        <div className="text-center">
-          <LoaderCircle
-            size={38}
-            className="mx-auto animate-spin text-[#FF5A0A]"
-          />
-
-          <p className="mt-4 text-sm font-semibold text-[#082B3A]">
-            Memuat detail fitur
-          </p>
-
-          <p className="mt-1 text-xs text-slate-500">
-            Data sedang diambil dari
-            Supabase.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
+/* ======================================================
+   COMPONENT
+====================================================== */
 
 export default function AdminServiceFeaturesSection({
   serviceId,
@@ -204,16 +331,30 @@ export default function AdminServiceFeaturesSection({
     isContentManager,
   } = useAdminAuth();
 
+  const availableGroups =
+    SERVICE_GROUP_OPTIONS[
+      serviceSlug
+    ] || [];
+
+  const ungroupedGroupOrder =
+    getUngroupedGroupOrder(
+      serviceSlug
+    );
+
   const [
     features,
     setFeatures,
   ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
   const [
     deletingId,
@@ -234,6 +375,15 @@ export default function AdminServiceFeaturesSection({
     editingId,
     setEditingId,
   ] = useState("");
+
+  /*
+   * root  = fitur utama
+   * child = subfitur
+   */
+  const [
+    featureType,
+    setFeatureType,
+  ] = useState("root");
 
   const [
     formData,
@@ -273,55 +423,145 @@ export default function AdminServiceFeaturesSection({
   ] = useState("");
 
   const [
+    formErrorMessage,
+    setFormErrorMessage,
+  ] = useState("");
+
+  const [
     successMessage,
     setSuccessMessage,
   ] = useState("");
 
+  /* ====================================================
+     PARENT OPTIONS
+  ==================================================== */
+
+  const availableParentFeatures =
+    useMemo(() => {
+      return features
+        .filter((feature) => {
+          if (
+            editingId &&
+            feature.id ===
+              editingId
+          ) {
+            return false;
+          }
+
+          /*
+           * Hanya root feature boleh
+           * menjadi parent.
+           */
+          if (
+            feature.parent_feature_id
+          ) {
+            return false;
+          }
+
+          const featureGroup =
+            String(
+              feature.group_name ||
+                ""
+            ).trim();
+
+          const currentGroup =
+            String(
+              formData.group_name ||
+                ""
+            ).trim();
+
+          /*
+           * Parent harus berada
+           * pada group yang sama.
+           */
+          return (
+            featureGroup ===
+            currentGroup
+          );
+        })
+        .sort(
+          (
+            firstItem,
+            secondItem
+          ) => {
+            const firstOrder =
+              Number(
+                firstItem.sort_order
+              ) || 0;
+
+            const secondOrder =
+              Number(
+                secondItem.sort_order
+              ) || 0;
+
+            return (
+              firstOrder -
+              secondOrder
+            );
+          }
+        );
+    }, [
+      features,
+      editingId,
+      formData.group_name,
+    ]);
+
+  /* ====================================================
+     LOAD
+  ==================================================== */
+
   const loadFeatures =
-    useCallback(async () => {
-      if (!serviceId) {
-        setFeatures([]);
-        setLoading(false);
-        return;
-      }
+    useCallback(
+      async () => {
+        if (!serviceId) {
+          setFeatures([]);
+          setLoading(false);
+          return;
+        }
 
-      try {
-        setLoading(true);
-        setErrorMessage("");
+        try {
+          setLoading(true);
+          setErrorMessage("");
 
-        const data =
-          await getAdminServiceFeatures(
-            serviceId
+          const data =
+            await getAdminServiceFeatures(
+              serviceId
+            );
+
+          setFeatures(
+            sortFeatureRecords(
+              Array.isArray(data)
+                ? data
+                : []
+            )
+          );
+        } catch (error) {
+          console.error(
+            "Detail fitur gagal dimuat:",
+            error
           );
 
-        setFeatures(
-          sortFeatureRecords(
-            Array.isArray(data)
-              ? data
-              : []
-          )
-        );
-      } catch (error) {
-        console.error(
-          "Detail fitur gagal dimuat:",
-          error
-        );
+          setFeatures([]);
 
-        setFeatures([]);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Detail fitur gagal dimuat."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [serviceId]);
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Detail fitur gagal dimuat."
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [serviceId]
+    );
 
   useEffect(() => {
     loadFeatures();
   }, [loadFeatures]);
+
+  /* ====================================================
+     IMAGE CLEANUP
+  ==================================================== */
 
   useEffect(() => {
     return () => {
@@ -337,34 +577,63 @@ export default function AdminServiceFeaturesSection({
     };
   }, [imagePreviewUrl]);
 
-  const summary = useMemo(() => {
-    const published =
-      features.filter(
-        (feature) =>
-          feature.status ===
-          "published"
-      ).length;
+  /* ====================================================
+     MODAL BODY LOCK
+  ==================================================== */
 
-    const draft =
-      features.filter(
-        (feature) =>
-          feature.status === "draft"
-      ).length;
+  useEffect(() => {
+    if (!formOpen) {
+      return undefined;
+    }
 
-    const archived =
-      features.filter(
-        (feature) =>
-          feature.status ===
-          "archived"
-      ).length;
+    const previousOverflow =
+      document.body.style.overflow;
 
-    return {
-      total: features.length,
-      published,
-      draft,
-      archived,
+    document.body.style.overflow =
+      "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
     };
-  }, [features]);
+  }, [formOpen]);
+
+  /* ====================================================
+     SUMMARY
+  ==================================================== */
+
+  const summary =
+    useMemo(() => {
+      return {
+        total:
+          features.length,
+
+        published:
+          features.filter(
+            (item) =>
+              item.status ===
+              "published"
+          ).length,
+
+        draft:
+          features.filter(
+            (item) =>
+              item.status ===
+              "draft"
+          ).length,
+
+        archived:
+          features.filter(
+            (item) =>
+              item.status ===
+              "archived"
+          ).length,
+      };
+    }, [features]);
+
+  /* ====================================================
+     FILTER
+  ==================================================== */
 
   const filteredFeatures =
     useMemo(() => {
@@ -375,14 +644,27 @@ export default function AdminServiceFeaturesSection({
 
       return features.filter(
         (feature) => {
+          const parent =
+            feature.parent_feature_id
+              ? features.find(
+                  (item) =>
+                    item.id ===
+                    feature.parent_feature_id
+                )
+              : null;
+
           const searchableText = [
+            feature.group_name,
             feature.name,
             feature.slug,
+            parent?.name,
             feature.short_description,
             feature.full_description,
           ]
             .map((value) =>
-              String(value || "")
+              String(
+                value || ""
+              )
                 .trim()
                 .toLowerCase()
             )
@@ -395,7 +677,8 @@ export default function AdminServiceFeaturesSection({
             );
 
           const matchesStatus =
-            statusFilter === "all" ||
+            statusFilter ===
+              "all" ||
             feature.status ===
               statusFilter;
 
@@ -410,6 +693,10 @@ export default function AdminServiceFeaturesSection({
       searchTerm,
       statusFilter,
     ]);
+
+  /* ====================================================
+     IMAGE
+  ==================================================== */
 
   function clearImagePreview() {
     if (
@@ -428,13 +715,26 @@ export default function AdminServiceFeaturesSection({
   function resetFormState() {
     setEditingId("");
 
-    setFormData(
-      createInitialFormData()
+    setFeatureType(
+      "root"
     );
 
-    setSlugManuallyEdited(false);
+    setFormData(
+      createInitialFormData(
+        0,
+        ungroupedGroupOrder
+      )
+    );
+
+    setSlugManuallyEdited(
+      false
+    );
+
     setImageFile(null);
+
     clearImagePreview();
+
+    setFormErrorMessage("");
   }
 
   function closeForm() {
@@ -443,13 +743,18 @@ export default function AdminServiceFeaturesSection({
     }
 
     setFormOpen(false);
+
     resetFormState();
   }
+
+  /* ====================================================
+     CREATE
+  ==================================================== */
 
   function openCreateForm() {
     if (!isContentManager) {
       setErrorMessage(
-        "Akun tidak memiliki izin untuk menambahkan detail fitur."
+        "Akun tidak memiliki izin untuk menambahkan fitur."
       );
 
       return;
@@ -457,9 +762,12 @@ export default function AdminServiceFeaturesSection({
 
     const highestSortOrder =
       features.reduce(
-        (highestValue, feature) =>
+        (
+          highest,
+          feature
+        ) =>
           Math.max(
-            highestValue,
+            highest,
             Number(
               feature.sort_order
             ) || 0
@@ -469,89 +777,161 @@ export default function AdminServiceFeaturesSection({
 
     setEditingId("");
 
+    setFeatureType(
+      "root"
+    );
+
     setFormData(
       createInitialFormData(
-        highestSortOrder + 1
+        highestSortOrder + 1,
+        ungroupedGroupOrder
       )
     );
 
-    setSlugManuallyEdited(false);
+    setSlugManuallyEdited(
+      false
+    );
+
     setImageFile(null);
+
     clearImagePreview();
 
     setErrorMessage("");
+
+    setFormErrorMessage("");
+
     setSuccessMessage("");
+
     setFormOpen(true);
   }
+
+  /* ====================================================
+     EDIT
+  ==================================================== */
 
   function openEditForm(feature) {
-    if (!isContentManager) {
-      setErrorMessage(
-        "Akun tidak memiliki izin untuk mengedit detail fitur."
-      );
+  if (!isContentManager) {
+    setErrorMessage(
+      "Akun tidak memiliki izin untuk mengedit fitur."
+    );
 
-      return;
-    }
-
-    setEditingId(feature.id);
-
-    setFormData({
-      name:
-        feature.name || "",
-
-      slug:
-        feature.slug || "",
-
-      short_description:
-        feature.short_description ||
-        "",
-
-      full_description:
-        feature.full_description ||
-        "",
-
-      image_url:
-        feature.image_url || "",
-
-      sort_order:
-        Number(
-          feature.sort_order
-        ) || 0,
-
-      status:
-        feature.status || "draft",
-    });
-
-    setSlugManuallyEdited(true);
-    setImageFile(null);
-    clearImagePreview();
-
-    setErrorMessage("");
-    setSuccessMessage("");
-    setFormOpen(true);
+    return;
   }
 
-  function handleInputChange(
-    event
-  ) {
+  const validParent =
+    feature.parent_feature_id
+      ? features.find(
+          (item) =>
+            item.id ===
+              feature.parent_feature_id &&
+            !item.parent_feature_id &&
+            String(
+              item.group_name || ""
+            ).trim() ===
+              String(
+                feature.group_name || ""
+              ).trim()
+        )
+      : null;
+
+  setEditingId(
+    feature.id
+  );
+
+  setFeatureType(
+    validParent
+      ? "child"
+      : "root"
+  );
+
+  setFormData({
+    group_name:
+      feature.group_name || "",
+
+    group_order:
+      Number(
+        feature.group_order
+      ) || 0,
+
+    parent_feature_id:
+      validParent?.id || "",
+
+    name:
+      feature.name || "",
+
+    slug:
+      feature.slug || "",
+
+    short_description:
+      feature.short_description || "",
+
+    full_description:
+      feature.full_description || "",
+
+    image_url:
+      feature.image_url || "",
+
+    sort_order:
+      Number(
+        feature.sort_order
+      ) || 0,
+
+    status:
+      feature.status || "draft",
+  });
+
+  setSlugManuallyEdited(
+    true
+  );
+
+  setImageFile(
+    null
+  );
+
+  clearImagePreview();
+
+  setErrorMessage(
+    ""
+  );
+
+  setFormErrorMessage(
+    ""
+  );
+
+  setSuccessMessage(
+    ""
+  );
+
+  setFormOpen(
+    true
+  );
+}
+
+  /* ====================================================
+     INPUT
+  ==================================================== */
+
+  function handleInputChange(event) {
     const {
       name,
       value,
     } = event.target;
 
-    setSuccessMessage("");
+    setFormErrorMessage("");
 
     if (name === "name") {
       setFormData(
-        (currentData) => ({
-          ...currentData,
+        (current) => ({
+          ...current,
 
           name: value,
 
           slug:
             slugManuallyEdited
-              ? currentData.slug
-              : createSlug(value),
+              ? current.slug
+              : createSlug(
+                  value
+                ),
         })
       );
 
@@ -559,12 +939,18 @@ export default function AdminServiceFeaturesSection({
     }
 
     if (name === "slug") {
-      setSlugManuallyEdited(true);
+      setSlugManuallyEdited(
+        true
+      );
 
       setFormData(
-        (currentData) => ({
-          ...currentData,
-          slug: createSlug(value),
+        (current) => ({
+          ...current,
+
+          slug:
+            createSlug(
+              value
+            ),
         })
       );
 
@@ -572,16 +958,73 @@ export default function AdminServiceFeaturesSection({
     }
 
     setFormData(
-      (currentData) => ({
-        ...currentData,
-        [name]: value,
+      (current) => ({
+        ...current,
+
+        [name]:
+          value,
       })
     );
   }
 
-  function handleImageChange(
-    event
+  function handleGroupChange(event) {
+    const selectedGroupName =
+      event.target.value;
+
+    const selectedGroup =
+      availableGroups.find(
+        (group) =>
+          group.name ===
+          selectedGroupName
+      );
+
+    setFeatureType(
+      "root"
+    );
+
+    setFormData(
+      (current) => ({
+        ...current,
+
+        group_name:
+          selectedGroupName,
+
+        group_order:
+          selectedGroup
+            ? selectedGroup.order
+            : ungroupedGroupOrder,
+
+        parent_feature_id:
+          "",
+      })
+    );
+
+    setFormErrorMessage("");
+  }
+
+  function handleFeatureTypeChange(
+    nextType
   ) {
+    setFeatureType(
+      nextType
+    );
+
+    setFormErrorMessage("");
+
+    if (
+      nextType === "root"
+    ) {
+      setFormData(
+        (current) => ({
+          ...current,
+          parent_feature_id:
+            "",
+        })
+      );
+    }
+  }
+
+  function handleImageChange(event) {
     const selectedFile =
       event.target.files?.[0];
 
@@ -596,7 +1039,7 @@ export default function AdminServiceFeaturesSection({
         selectedFile.type
       )
     ) {
-      setErrorMessage(
+      setFormErrorMessage(
         "Gambar harus berformat JPG, PNG, atau WebP."
       );
 
@@ -607,7 +1050,7 @@ export default function AdminServiceFeaturesSection({
       selectedFile.size >
       MAX_IMAGE_SIZE
     ) {
-      setErrorMessage(
+      setFormErrorMessage(
         "Ukuran gambar maksimal 2 MB."
       );
 
@@ -616,7 +1059,9 @@ export default function AdminServiceFeaturesSection({
 
     clearImagePreview();
 
-    setImageFile(selectedFile);
+    setImageFile(
+      selectedFile
+    );
 
     setImagePreviewUrl(
       URL.createObjectURL(
@@ -624,35 +1069,112 @@ export default function AdminServiceFeaturesSection({
       )
     );
 
-    setErrorMessage("");
-    setSuccessMessage("");
+    setFormErrorMessage("");
   }
 
   function handleRemoveImage() {
     setImageFile(null);
+
     clearImagePreview();
 
     setFormData(
-      (currentData) => ({
-        ...currentData,
+      (current) => ({
+        ...current,
         image_url: "",
       })
     );
-
-    setSuccessMessage("");
   }
+
+  /* ====================================================
+     VALIDATION
+  ==================================================== */
 
   function validateForm() {
     if (!serviceId) {
-      return "ID layanan induk tidak tersedia.";
+      return "ID Service tidak tersedia.";
     }
 
-    if (!formData.name.trim()) {
+    if (
+      !formData.name.trim()
+    ) {
       return "Nama fitur wajib diisi.";
     }
 
-    if (!formData.slug.trim()) {
+    if (
+      !formData.slug.trim()
+    ) {
       return "Slug fitur wajib diisi.";
+    }
+
+    /*
+     * Parent hanya wajib apabila
+     * admin memilih tipe Subfitur.
+     */
+    if (
+      featureType ===
+        "child" &&
+      !formData.parent_feature_id
+    ) {
+      return "Pilih Parent Fitur untuk membuat Subfitur.";
+    }
+
+    if (
+      featureType ===
+        "child" &&
+      formData.parent_feature_id ===
+        editingId
+    ) {
+      return "Fitur tidak dapat menjadi parent untuk dirinya sendiri.";
+    }
+
+    if (
+      featureType ===
+        "child"
+    ) {
+      const parent =
+        features.find(
+          (item) =>
+            item.id ===
+            formData.parent_feature_id
+        );
+
+      if (!parent) {
+        return "Parent Fitur yang dipilih tidak ditemukan.";
+      }
+
+      if (
+        parent.parent_feature_id
+      ) {
+        return "Subfitur tidak dapat digunakan sebagai Parent.";
+      }
+
+      if (
+        String(
+          parent.group_name ||
+            ""
+        ).trim() !==
+        String(
+          formData.group_name ||
+            ""
+        ).trim()
+      ) {
+        return "Parent harus berada pada kelompok yang sama.";
+      }
+    }
+
+    const groupOrder =
+      Number.parseInt(
+        formData.group_order,
+        10
+      );
+
+    if (
+      !Number.isFinite(
+        groupOrder
+      ) ||
+      groupOrder < 0
+    ) {
+      return "Urutan kelompok tidak valid.";
     }
 
     const sortOrder =
@@ -662,29 +1184,37 @@ export default function AdminServiceFeaturesSection({
       );
 
     if (
-      !Number.isFinite(sortOrder) ||
+      !Number.isFinite(
+        sortOrder
+      ) ||
       sortOrder < 0
     ) {
-      return "Urutan tampil harus berupa angka minimal 0.";
-    }
-
-    const validStatus =
-      STATUS_OPTIONS.some(
-        (option) =>
-          option.value ===
-          formData.status
-      );
-
-    if (!validStatus) {
-      return "Status fitur tidak valid.";
+      return "Urutan fitur tidak valid.";
     }
 
     return "";
   }
 
-  async function handleSubmit(
-    event
-  ) {
+  function scrollModalToTop() {
+    window.requestAnimationFrame(
+      () => {
+        document
+          .getElementById(
+            "service-feature-modal-content"
+          )
+          ?.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+      }
+    );
+  }
+
+  /* ====================================================
+     SAVE
+  ==================================================== */
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
     if (
@@ -698,19 +1228,44 @@ export default function AdminServiceFeaturesSection({
       validateForm();
 
     if (validationMessage) {
-      setErrorMessage(
+      setFormErrorMessage(
         validationMessage
       );
+
+      scrollModalToTop();
 
       return;
     }
 
     try {
       setSaving(true);
+
+      setFormErrorMessage("");
+
       setErrorMessage("");
+
       setSuccessMessage("");
 
       const payload = {
+        group_name:
+          formData.group_name.trim(),
+
+        group_order:
+          Number.parseInt(
+            formData.group_order,
+            10
+          ),
+
+        /*
+         * Root = NULL.
+         * Child = ID Parent.
+         */
+        parent_feature_id:
+          featureType ===
+            "child"
+            ? formData.parent_feature_id
+            : null,
+
         name:
           formData.name.trim(),
 
@@ -749,20 +1304,20 @@ export default function AdminServiceFeaturesSection({
           );
 
         setFeatures(
-          (currentItems) =>
+          (current) =>
             sortFeatureRecords(
-              currentItems.map(
-                (feature) =>
-                  feature.id ===
+              current.map(
+                (item) =>
+                  item.id ===
                   editingId
                     ? savedFeature
-                    : feature
+                    : item
               )
             )
         );
 
         setSuccessMessage(
-          "Detail fitur berhasil diperbarui."
+          `Fitur “${savedFeature?.name || formData.name}” berhasil diperbarui.`
         );
       } else {
         savedFeature =
@@ -773,35 +1328,42 @@ export default function AdminServiceFeaturesSection({
           );
 
         setFeatures(
-          (currentItems) =>
+          (current) =>
             sortFeatureRecords([
-              ...currentItems,
+              ...current,
               savedFeature,
             ])
         );
 
         setSuccessMessage(
-          "Detail fitur berhasil ditambahkan."
+          `Fitur “${savedFeature?.name || formData.name}” berhasil ditambahkan.`
         );
       }
 
       setFormOpen(false);
+
       resetFormState();
     } catch (error) {
       console.error(
-        "Detail fitur gagal disimpan:",
+        "Fitur gagal disimpan:",
         error
       );
 
-      setErrorMessage(
+      setFormErrorMessage(
         error instanceof Error
           ? error.message
-          : "Detail fitur gagal disimpan."
+          : "Fitur gagal disimpan."
       );
+
+      scrollModalToTop();
     } finally {
       setSaving(false);
     }
   }
+
+  /* ====================================================
+     TOGGLE STATUS
+  ==================================================== */
 
   async function handleToggleStatus(
     feature
@@ -820,14 +1382,29 @@ export default function AdminServiceFeaturesSection({
         : "published";
 
     try {
-      setTogglingId(feature.id);
+      setTogglingId(
+        feature.id
+      );
+
       setErrorMessage("");
-      setSuccessMessage("");
 
       const updatedFeature =
         await updateServiceFeature(
           feature.id,
           {
+            parent_feature_id:
+              feature.parent_feature_id ||
+              null,
+
+            group_name:
+              feature.group_name ||
+              "",
+
+            group_order:
+              Number(
+                feature.group_order
+              ) || 0,
+
             name:
               feature.name,
 
@@ -835,16 +1412,21 @@ export default function AdminServiceFeaturesSection({
               feature.slug,
 
             short_description:
-              feature.short_description,
+              feature.short_description ||
+              "",
 
             full_description:
-              feature.full_description,
+              feature.full_description ||
+              "",
 
             image_url:
-              feature.image_url,
+              feature.image_url ||
+              "",
 
             sort_order:
-              feature.sort_order,
+              Number(
+                feature.sort_order
+              ) || 0,
 
             status:
               nextStatus,
@@ -852,9 +1434,9 @@ export default function AdminServiceFeaturesSection({
         );
 
       setFeatures(
-        (currentItems) =>
+        (current) =>
           sortFeatureRecords(
-            currentItems.map(
+            current.map(
               (item) =>
                 item.id ===
                 feature.id
@@ -867,15 +1449,10 @@ export default function AdminServiceFeaturesSection({
       setSuccessMessage(
         nextStatus ===
           "published"
-          ? "Detail fitur berhasil dipublikasikan."
-          : "Detail fitur berhasil dijadikan Draft."
+          ? `Fitur “${feature.name}” berhasil dipublikasikan.`
+          : `Fitur “${feature.name}” berhasil dijadikan Draft.`
       );
     } catch (error) {
-      console.error(
-        "Status fitur gagal diperbarui:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
@@ -886,20 +1463,33 @@ export default function AdminServiceFeaturesSection({
     }
   }
 
-  async function handleDelete(
-    feature
-  ) {
-    if (!isAdmin || deletingId) {
-      setErrorMessage(
-        "Hanya admin yang dapat menghapus detail fitur."
-      );
+  /* ====================================================
+     DELETE
+  ==================================================== */
 
+  async function handleDelete(feature) {
+    if (
+      !isAdmin ||
+      deletingId
+    ) {
       return;
     }
 
+    const childCount =
+      features.filter(
+        (item) =>
+          item.parent_feature_id ===
+          feature.id
+      ).length;
+
+    const childNotice =
+      childCount > 0
+        ? `\n\nFitur ini memiliki ${childCount} subfitur. Subfitur akan menjadi fitur utama setelah parent dihapus.`
+        : "";
+
     const confirmed =
       window.confirm(
-        `Hapus detail fitur "${feature.name}"?\n\nData yang sudah dihapus tidak dapat dikembalikan.`
+        `Hapus fitur "${feature.name}"?${childNotice}\n\nData yang dihapus tidak dapat dikembalikan.`
       );
 
     if (!confirmed) {
@@ -907,891 +1497,1032 @@ export default function AdminServiceFeaturesSection({
     }
 
     try {
-      setDeletingId(feature.id);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDeletingId(
+        feature.id
+      );
 
       await deleteServiceFeature(
         feature.id
       );
 
       setFeatures(
-        (currentItems) =>
-          currentItems.filter(
-            (item) =>
-              item.id !==
-              feature.id
+        (current) =>
+          sortFeatureRecords(
+            current
+              .filter(
+                (item) =>
+                  item.id !==
+                  feature.id
+              )
+              .map(
+                (item) =>
+                  item.parent_feature_id ===
+                  feature.id
+                    ? {
+                        ...item,
+                        parent_feature_id:
+                          null,
+                      }
+                    : item
+              )
           )
       );
 
       setSuccessMessage(
-        "Detail fitur berhasil dihapus."
+        `Fitur “${feature.name}” berhasil dihapus.`
       );
     } catch (error) {
-      console.error(
-        "Detail fitur gagal dihapus:",
-        error
-      );
-
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Detail fitur gagal dihapus."
+          : "Fitur gagal dihapus."
       );
     } finally {
       setDeletingId("");
     }
   }
 
-  function resetFilters() {
-    setSearchTerm("");
-    setStatusFilter("all");
-  }
-
-  if (loading) {
-    return <LoadingSection />;
-  }
-
   const displayedImage =
     imagePreviewUrl ||
     formData.image_url;
 
-  return (
-    <section className="space-y-7 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#FF5A0A]">
-            <Sparkles size={14} />
-
-            Detail Fitur & Cakupan
-          </div>
-
-          <h2 className="mt-4 text-2xl font-bold text-[#082B3A]">
-            Kelola detail setiap fitur
-          </h2>
-
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">
-            Tambahkan halaman detail
-            untuk setiap poin fitur
-            yang terdapat pada{" "}
-            <span className="font-semibold text-[#082B3A]">
-              {serviceName ||
-                "layanan ini"}
-            </span>
-            .
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={loadFeatures}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-[#FF5A0A] hover:text-[#FF5A0A] disabled:opacity-50"
-          >
-            <RefreshCw size={17} />
-
-            Refresh
-          </button>
-
-          {isContentManager && (
-            <button
-              type="button"
-              onClick={openCreateForm}
-              disabled={!serviceId}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E94F00] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Plus size={18} />
-
-              Tambah Detail Fitur
-            </button>
-          )}
-        </div>
-      </div>
-
-      {!serviceId && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <AlertTriangle
-            size={21}
-            className="mt-0.5 shrink-0 text-amber-600"
+  if (loading) {
+    return (
+      <div className="flex min-h-72 items-center justify-center rounded-3xl border border-slate-200 bg-white">
+        <div className="text-center">
+          <LoaderCircle
+            size={36}
+            className="mx-auto animate-spin text-[#FF5A0A]"
           />
 
-          <div>
-            <p className="font-semibold text-amber-800">
-              ID Service belum tersedia
-            </p>
+          <p className="mt-4 text-sm font-semibold text-[#082B3A]">
+            Memuat fitur...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-            <p className="mt-1 text-sm leading-6 text-amber-700">
-              Simpan Service utama
-              terlebih dahulu sebelum
-              menambahkan detail fitur.
-            </p>
+  /* ====================================================
+     RENDER
+  ==================================================== */
+
+  return (
+    <>
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        {/* HEADER */}
+
+        <div className="border-b border-slate-100 px-6 py-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-[#FF5A0A]">
+                <Layers3 size={15} />
+                Feature Management
+              </div>
+
+              <h2 className="mt-2 text-2xl font-bold text-[#082B3A]">
+                Fitur & Cakupan
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Kelola fitur utama dan subfitur untuk{" "}
+                <strong className="text-[#082B3A]">
+                  {serviceName}
+                </strong>
+                .
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={
+                  loadFeatures
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-[#FF5A0A] hover:text-[#FF5A0A]"
+              >
+                <RefreshCw size={16} />
+                Refresh
+              </button>
+
+              {isContentManager && (
+                <button
+                  type="button"
+                  onClick={
+                    openCreateForm
+                  }
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#E94F00]"
+                >
+                  <Plus size={17} />
+                  Tambah Fitur
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Pesan error */}
-      {errorMessage && (
-        <div
-          role="alert"
-          className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-5 py-4"
-        >
-          <div className="flex items-start gap-3">
-            <AlertTriangle
-              size={21}
-              className="mt-0.5 shrink-0 text-red-600"
-            />
+        <div className="space-y-6 p-6 lg:p-8">
+          {/* MESSAGES */}
 
-            <div>
-              <p className="font-semibold text-red-800">
-                Terjadi kesalahan
-              </p>
+          {errorMessage && (
+            <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
+              <AlertTriangle
+                size={19}
+                className="mt-0.5 shrink-0 text-red-600"
+              />
 
-              <p className="mt-1 text-sm leading-6 text-red-700">
+              <p className="text-sm text-red-700">
                 {errorMessage}
               </p>
             </div>
-          </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() =>
-              setErrorMessage("")
-            }
-            className="shrink-0 text-xs font-semibold text-red-700"
-          >
-            Tutup
-          </button>
-        </div>
-      )}
+          {successMessage && (
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+              <CheckCircle2
+                size={19}
+                className="mt-0.5 shrink-0 text-emerald-600"
+              />
 
-      {/* Pesan berhasil */}
-      {successMessage && (
-        <div
-          role="status"
-          className="flex items-start justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4"
-        >
-          <div className="flex items-start gap-3">
-            <CheckCircle2
-              size={21}
-              className="mt-0.5 shrink-0 text-emerald-600"
-            />
-
-            <div>
-              <p className="font-semibold text-emerald-800">
-                Berhasil
-              </p>
-
-              <p className="mt-1 text-sm leading-6 text-emerald-700">
+              <p className="text-sm text-emerald-700">
                 {successMessage}
               </p>
             </div>
+          )}
+
+          {isEditor && (
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-6 text-blue-700">
+              Editor dapat menambah, mengedit, menentukan parent dan mengubah
+              status. Penghapusan hanya tersedia untuk Admin.
+            </div>
+          )}
+
+          {/* SUMMARY */}
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              [
+                "Total",
+                summary.total,
+                "text-[#082B3A]",
+              ],
+              [
+                "Published",
+                summary.published,
+                "text-emerald-600",
+              ],
+              [
+                "Draft",
+                summary.draft,
+                "text-amber-600",
+              ],
+              [
+                "Archived",
+                summary.archived,
+                "text-slate-500",
+              ],
+            ].map(
+              ([
+                label,
+                value,
+                color,
+              ]) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-slate-200 bg-slate-50/60 px-4 py-4"
+                >
+                  <p
+                    className={`text-2xl font-bold ${color}`}
+                  >
+                    {value}
+                  </p>
+
+                  <p className="mt-1 text-xs font-medium text-slate-500">
+                    {label}
+                  </p>
+                </div>
+              )
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setSuccessMessage("")
-            }
-            className="shrink-0 text-xs font-semibold text-emerald-700"
-          >
-            Tutup
-          </button>
-        </div>
-      )}
+          {/* FILTER */}
 
-      {isEditor && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm leading-7 text-blue-700">
-          Editor dapat menambah,
-          mengedit, mengunggah gambar,
-          serta mengubah status. Hanya
-          admin yang dapat menghapus.
-        </div>
-      )}
+          <div className="grid gap-3 rounded-2xl bg-slate-50 p-3 md:grid-cols-[1fr_190px_auto]">
+            <div className="relative">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-      {/* Statistik */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-2xl bg-[#082B3A] p-5 text-white">
-          <Sparkles
-            size={22}
-            className="text-[#FF5A0A]"
-          />
-
-          <p className="mt-5 text-3xl font-bold">
-            {summary.total}
-          </p>
-
-          <p className="mt-1 text-sm text-white/60">
-            Total fitur
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <Eye
-            size={22}
-            className="text-emerald-600"
-          />
-
-          <p className="mt-5 text-3xl font-bold text-[#082B3A]">
-            {summary.published}
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Published
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <EyeOff
-            size={22}
-            className="text-amber-600"
-          />
-
-          <p className="mt-5 text-3xl font-bold text-[#082B3A]">
-            {summary.draft}
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Draft
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
-          <Trash2
-            size={22}
-            className="text-slate-600"
-          />
-
-          <p className="mt-5 text-3xl font-bold text-[#082B3A]">
-            {summary.archived}
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Archived
-          </p>
-        </article>
-      </div>
-
-      {/* Filter */}
-      <div className="grid gap-4 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
-        <div className="relative">
-          <Search
-            size={18}
-            className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) =>
-              setSearchTerm(
-                event.target.value
-              )
-            }
-            placeholder="Cari nama, slug, atau deskripsi..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-          />
-        </div>
-
-        <select
-          value={statusFilter}
-          onChange={(event) =>
-            setStatusFilter(
-              event.target.value
-            )
-          }
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-        >
-          <option value="all">
-            Semua Status
-          </option>
-
-          {STATUS_OPTIONS.map(
-            (option) => (
-              <option
-                key={option.value}
-                value={option.value}
-              >
-                {option.label}
-              </option>
-            )
-          )}
-        </select>
-
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-[#FF5A0A] hover:text-[#FF5A0A]"
-        >
-          Reset
-        </button>
-      </div>
-
-      {/* Daftar fitur */}
-      {filteredFeatures.length ===
-      0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
-          <Sparkles
-            size={42}
-            className="mx-auto text-slate-300"
-          />
-
-          <h3 className="mt-5 text-xl font-bold text-[#082B3A]">
-            {features.length === 0
-              ? "Detail fitur belum tersedia"
-              : "Fitur tidak ditemukan"}
-          </h3>
-
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-7 text-slate-500">
-            {features.length === 0
-              ? "Tambahkan detail fitur agar setiap poin Fitur dan Cakupan memiliki halaman detail."
-              : "Tidak ada fitur yang sesuai dengan pencarian atau filter status."}
-          </p>
-
-          {isContentManager && (
-            <button
-              type="button"
-              onClick={
-                features.length === 0
-                  ? openCreateForm
-                  : resetFilters
-              }
-              disabled={!serviceId}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#E94F00] disabled:opacity-50"
-            >
-              {features.length === 0 && (
-                <Plus size={17} />
-              )}
-
-              {features.length === 0
-                ? "Tambah Detail Fitur"
-                : "Tampilkan Semua"}
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredFeatures.map(
-            (feature) => {
-              const publicUrl =
-                serviceSlug &&
-                feature.slug
-                  ? `/services/${serviceSlug}/features/${feature.slug}`
-                  : "";
-
-              const isToggling =
-                togglingId ===
-                feature.id;
-
-              const isDeleting =
-                deletingId ===
-                feature.id;
-
-              return (
-                <article
-                  key={feature.id}
-                  className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-xl"
-                >
-                  <div className="relative flex h-52 items-center justify-center overflow-hidden bg-slate-50">
-                    {feature.image_url ? (
-                      <img
-                        src={
-                          feature.image_url
-                        }
-                        alt={feature.name}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="text-center">
-                        <ImageIcon
-                          size={48}
-                          className="mx-auto text-slate-300"
-                        />
-
-                        <p className="mt-3 text-xs font-semibold text-slate-400">
-                          Gambar belum tersedia
-                        </p>
-                      </div>
-                    )}
-
-                    <span
-                      className={`absolute right-4 top-4 rounded-full border px-3 py-1.5 text-xs font-semibold ${getStatusClass(
-                        feature.status
-                      )}`}
-                    >
-                      {getStatusLabel(
-                        feature.status
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="p-6">
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#FF5A0A]">
-                        Urutan{" "}
-                        {
-                          feature.sort_order
-                        }
-                      </p>
-
-                      <p className="text-xs text-slate-400">
-                        {formatUpdatedAt(
-                          feature.updated_at
-                        )}
-                      </p>
-                    </div>
-
-                    <h3 className="mt-4 break-words text-xl font-bold leading-8 text-[#082B3A]">
-                      {feature.name}
-                    </h3>
-
-                    <p className="mt-2 break-all text-xs font-semibold text-slate-400">
-                      /{feature.slug}
-                    </p>
-
-                    <p className="mt-4 min-h-[5.25rem] text-sm leading-7 text-slate-500">
-                      {feature.short_description ||
-                        "Deskripsi singkat fitur belum tersedia."}
-                    </p>
-
-                    {publicUrl &&
-                      feature.status ===
-                        "published" && (
-                        <Link
-                          to={publicUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#FF5A0A] transition hover:underline"
-                        >
-                          Lihat Halaman Publik
-
-                          <ArrowUpRight
-                            size={16}
-                          />
-                        </Link>
-                      )}
-
-                    {isContentManager && (
-                      <div className="mt-6 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleToggleStatus(
-                              feature
-                            )
-                          }
-                          disabled={
-                            isToggling ||
-                            isDeleting
-                          }
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-600 transition hover:border-[#FF5A0A] hover:text-[#FF5A0A] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isToggling ? (
-                            <LoaderCircle
-                              size={16}
-                              className="animate-spin"
-                            />
-                          ) : feature.status ===
-                            "published" ? (
-                            <EyeOff
-                              size={16}
-                            />
-                          ) : (
-                            <Eye size={16} />
-                          )}
-
-                          {feature.status ===
-                          "published"
-                            ? "Jadikan Draft"
-                            : "Publish"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openEditForm(
-                              feature
-                            )
-                          }
-                          disabled={
-                            isToggling ||
-                            isDeleting
-                          }
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-3 py-3 text-xs font-semibold text-white transition hover:bg-[#0A4053] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Edit3 size={16} />
-
-                          Edit
-                        </button>
-                      </div>
-                    )}
-
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDelete(
-                            feature
-                          )
-                        }
-                        disabled={
-                          isDeleting ||
-                          isToggling
-                        }
-                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {isDeleting ? (
-                          <>
-                            <LoaderCircle
-                              size={16}
-                              className="animate-spin"
-                            />
-
-                            Menghapus...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2
-                              size={16}
-                            />
-
-                            Hapus Detail Fitur
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </article>
-              );
-            }
-          )}
-        </div>
-      )}
-
-      {/* Modal tambah/edit fitur */}
-      {formOpen && (
-        <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#082B3A]/75 px-3 py-5 backdrop-blur-sm sm:px-5 sm:py-8">
-          <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-7">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#FF5A0A]">
-                  Detail Fitur & Cakupan
-                </p>
-
-                <h2 className="mt-2 text-xl font-bold text-[#082B3A] sm:text-2xl">
-                  {editingId
-                    ? "Edit Detail Fitur"
-                    : "Tambah Detail Fitur"}
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  {serviceName ||
-                    "Service"}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeForm}
-                disabled={saving}
-                aria-label="Tutup form"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-red-200 hover:text-red-600 disabled:opacity-50"
-              >
-                <X size={20} />
-              </button>
+              <input
+                type="search"
+                value={
+                  searchTerm
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSearchTerm(
+                    event.target.value
+                  )
+                }
+                placeholder="Cari fitur..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[#FF5A0A]"
+              />
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-8 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_330px]">
-                {/* Input utama */}
-                <div className="space-y-6">
-                  <div>
-                    <label
-                      htmlFor="service-feature-name"
-                      className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                    >
-                      Nama Fitur
-                      <span className="ml-1 text-red-500">
-                        *
-                      </span>
-                    </label>
+            <select
+              value={
+                statusFilter
+              }
+              onChange={(
+                event
+              ) =>
+                setStatusFilter(
+                  event.target.value
+                )
+              }
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none"
+            >
+              <option value="all">
+                Semua Status
+              </option>
 
-                    <input
-                      id="service-feature-name"
-                      name="name"
-                      type="text"
-                      value={formData.name}
-                      onChange={
-                        handleInputChange
+              {STATUS_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={
+                      option.value
+                    }
+                    value={
+                      option.value
+                    }
+                  >
+                    {option.label}
+                  </option>
+                )
+              )}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600"
+            >
+              Reset
+            </button>
+          </div>
+
+          {/* FEATURE LIST */}
+
+          {filteredFeatures.length ===
+          0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
+              <Sparkles
+                size={38}
+                className="mx-auto text-slate-300"
+              />
+
+              <h3 className="mt-4 font-bold text-[#082B3A]">
+                Fitur tidak ditemukan
+              </h3>
+            </div>
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {filteredFeatures.map(
+                (feature) => {
+                  const parent =
+                    feature.parent_feature_id
+                      ? features.find(
+                          (item) =>
+                            item.id ===
+                            feature.parent_feature_id
+                        )
+                      : null;
+
+                  const publicUrl =
+                    serviceSlug &&
+                    feature.slug
+                      ? `/services/${serviceSlug}/features/${feature.slug}`
+                      : "";
+
+                  return (
+                    <article
+                      key={
+                        feature.id
                       }
-                      required
-                      placeholder="Contoh: Enterprise Resource Planning"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="service-feature-slug"
-                      className="mb-2 block text-sm font-semibold text-[#082B3A]"
+                      className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-orange-200 hover:shadow-md"
                     >
-                      Slug
-                      <span className="ml-1 text-red-500">
-                        *
-                      </span>
-                    </label>
+                      <div className="flex gap-4">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                          {feature.image_url ? (
+                            <img
+                              src={
+                                feature.image_url
+                              }
+                              alt={
+                                feature.name
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <ImageIcon
+                              size={22}
+                              className="text-slate-300"
+                            />
+                          )}
+                        </div>
 
-                    <input
-                      id="service-feature-slug"
-                      name="slug"
-                      type="text"
-                      value={formData.slug}
-                      onChange={
-                        handleInputChange
-                      }
-                      required
-                      placeholder="enterprise-resource-planning"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                    />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${getStatusClass(
+                                feature.status
+                              )}`}
+                            >
+                              {getStatusLabel(
+                                feature.status
+                              )}
+                            </span>
 
-                    <p className="mt-2 break-all text-xs leading-5 text-slate-400">
-                      URL: /services/
-                      {serviceSlug ||
-                        "service-slug"}
-                      /features/
-                      {formData.slug ||
-                        "feature-slug"}
+                            <span className="text-[11px] text-slate-400">
+                              {formatUpdatedAt(
+                                feature.updated_at
+                              )}
+                            </span>
+                          </div>
+
+                          <h3 className="mt-2 font-bold text-[#082B3A]">
+                            {feature.name}
+                          </h3>
+
+                          {parent ? (
+                            <p className="mt-1 text-xs font-medium text-[#FF5A0A]">
+                              Subfitur dari{" "}
+                              {parent.name}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-slate-400">
+                              Fitur Utama
+                            </p>
+                          )}
+
+                          {feature.group_name && (
+                            <p className="mt-2 text-xs text-slate-500">
+                              {
+                                feature.group_name
+                              }
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="mt-4 line-clamp-2 text-sm leading-6 text-slate-500">
+                        {feature.short_description ||
+                          "Deskripsi singkat belum tersedia."}
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                        {publicUrl &&
+                          feature.status ===
+                            "published" && (
+                            <Link
+                              to={
+                                publicUrl
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                            >
+                              <ArrowUpRight
+                                size={
+                                  14
+                                }
+                              />
+                              Live
+                            </Link>
+                          )}
+
+                        {isContentManager && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEditForm(
+                                  feature
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#082B3A] px-3 py-2 text-xs font-semibold text-white"
+                            >
+                              <Edit3
+                                size={
+                                  14
+                                }
+                              />
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={
+                                togglingId ===
+                                feature.id
+                              }
+                              onClick={() =>
+                                handleToggleStatus(
+                                  feature
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                            >
+                              {feature.status ===
+                              "published" ? (
+                                <EyeOff
+                                  size={
+                                    14
+                                  }
+                                />
+                              ) : (
+                                <Eye
+                                  size={
+                                    14
+                                  }
+                                />
+                              )}
+
+                              {feature.status ===
+                              "published"
+                                ? "Draft"
+                                : "Publish"}
+                            </button>
+                          </>
+                        )}
+
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDelete(
+                                feature
+                              )
+                            }
+                            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600"
+                          >
+                            <Trash2
+                              size={
+                                14
+                              }
+                            />
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                }
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ==================================================
+          MODAL
+      ================================================== */}
+
+      {formOpen && (
+        <div
+          className="fixed inset-0 z-[9999] bg-[#082B3A]/80 p-3 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="flex h-full items-center justify-center">
+            <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+              {/* MODAL HEADER */}
+
+              <div className="shrink-0 border-b border-slate-100 px-6 py-5">
+                <div className="flex items-start justify-between gap-5">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#FF5A0A]">
+                      Feature Management
+                    </p>
+
+                    <h2 className="mt-2 text-2xl font-bold text-[#082B3A]">
+                      {editingId
+                        ? "Edit Fitur"
+                        : "Tambah Fitur"}
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {serviceName}
                     </p>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="service-feature-short-description"
-                      className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                    >
-                      Deskripsi Singkat
-                    </label>
+                  <button
+                    type="button"
+                    onClick={
+                      closeForm
+                    }
+                    disabled={saving}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
 
-                    <textarea
-                      id="service-feature-short-description"
-                      name="short_description"
-                      value={
-                        formData.short_description
-                      }
-                      onChange={
-                        handleInputChange
-                      }
-                      rows={4}
-                      placeholder="Masukkan ringkasan singkat fitur..."
-                      className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                    />
-                  </div>
+              <form
+                onSubmit={
+                  handleSubmit
+                }
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <div
+                  id="service-feature-modal-content"
+                  className="min-h-0 flex-1 overflow-y-auto"
+                >
+                  <div className="p-6">
+                    {formErrorMessage && (
+                      <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                        <AlertTriangle
+                          size={19}
+                          className="mt-0.5 shrink-0 text-red-600"
+                        />
 
-                  <div>
-                    <label
-                      htmlFor="service-feature-full-description"
-                      className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                    >
-                      Deskripsi Lengkap
-                    </label>
+                        <div>
+                          <p className="font-semibold text-red-800">
+                            Data belum dapat disimpan
+                          </p>
 
-                    <textarea
-                      id="service-feature-full-description"
-                      name="full_description"
-                      value={
-                        formData.full_description
-                      }
-                      onChange={
-                        handleInputChange
-                      }
-                      rows={9}
-                      placeholder="Jelaskan fungsi, manfaat, dan cakupan fitur secara lengkap..."
-                      className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                    />
-                  </div>
+                          <p className="mt-1 text-sm text-red-700">
+                            {formErrorMessage}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div>
-                      <label
-                        htmlFor="service-feature-sort-order"
-                        className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                      >
-                        Urutan Tampil
-                      </label>
+                    <div className="grid gap-7 lg:grid-cols-[1fr_300px]">
+                      <div className="space-y-6">
+                        {/* TYPE */}
 
-                      <input
-                        id="service-feature-sort-order"
-                        name="sort_order"
-                        type="number"
-                        min="0"
-                        value={
-                          formData.sort_order
-                        }
-                        onChange={
-                          handleInputChange
-                        }
-                        required
-                        className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                      />
-                    </div>
+                        <div>
+                          <label className="mb-3 block text-sm font-semibold text-[#082B3A]">
+                            Tipe Fitur
+                          </label>
 
-                    <div>
-                      <label
-                        htmlFor="service-feature-status"
-                        className="mb-2 block text-sm font-semibold text-[#082B3A]"
-                      >
-                        Status
-                      </label>
-
-                      <select
-                        id="service-feature-status"
-                        name="status"
-                        value={
-                          formData.status
-                        }
-                        onChange={
-                          handleInputChange
-                        }
-                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#082B3A] outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
-                      >
-                        {STATUS_OPTIONS.map(
-                          (option) => (
-                            <option
-                              key={
-                                option.value
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFeatureTypeChange(
+                                  "root"
+                                )
                               }
-                              value={
-                                option.value
-                              }
+                              className={`rounded-2xl border p-4 text-left transition ${
+                                featureType ===
+                                "root"
+                                  ? "border-[#FF5A0A] bg-orange-50 ring-2 ring-orange-100"
+                                  : "border-slate-200 bg-white hover:border-slate-300"
+                              }`}
                             >
-                              {
-                                option.label
+                              <p className="font-bold text-[#082B3A]">
+                                Fitur Utama
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-slate-500">
+                                Berdiri sendiri dan tidak membutuhkan Parent.
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleFeatureTypeChange(
+                                  "child"
+                                )
                               }
-                            </option>
-                          )
+                              className={`rounded-2xl border p-4 text-left transition ${
+                                featureType ===
+                                "child"
+                                  ? "border-[#FF5A0A] bg-orange-50 ring-2 ring-orange-100"
+                                  : "border-slate-200 bg-white hover:border-slate-300"
+                              }`}
+                            >
+                              <p className="font-bold text-[#082B3A]">
+                                Subfitur
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-slate-500">
+                                Berada di bawah fitur utama seperti Telehealth.
+                              </p>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* GROUP */}
+
+                        {availableGroups.length >
+                          0 && (
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                                Kelompok Fitur
+                              </label>
+
+                              <select
+                                value={
+                                  formData.group_name
+                                }
+                                onChange={
+                                  handleGroupChange
+                                }
+                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#FF5A0A]"
+                              >
+                                <option value="">
+                                  Tanpa Kelompok
+                                </option>
+
+                                {availableGroups.map(
+                                  (
+                                    group
+                                  ) => (
+                                    <option
+                                      key={
+                                        group.name
+                                      }
+                                      value={
+                                        group.name
+                                      }
+                                    >
+                                      {
+                                        group.name
+                                      }
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                                Urutan Kelompok
+                              </label>
+
+                              <input
+                                value={
+                                  formData.group_order
+                                }
+                                readOnly
+                                className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-500"
+                              />
+                            </div>
+                          </div>
                         )}
-                      </select>
+
+                        {/* PARENT */}
+
+                        {featureType ===
+                          "child" && (
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                              Parent Fitur{" "}
+                              <span className="text-red-500">
+                                *
+                              </span>
+                            </label>
+
+                            <select
+                              name="parent_feature_id"
+                              value={
+                                formData.parent_feature_id
+                              }
+                              onChange={
+                                handleInputChange
+                              }
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#FF5A0A]"
+                            >
+                              <option value="">
+                                Pilih Parent Fitur
+                              </option>
+
+                              {availableParentFeatures.map(
+                                (
+                                  feature
+                                ) => (
+                                  <option
+                                    key={
+                                      feature.id
+                                    }
+                                    value={
+                                      feature.id
+                                    }
+                                  >
+                                    {
+                                      feature.name
+                                    }
+                                  </option>
+                                )
+                              )}
+                            </select>
+
+                            {availableParentFeatures.length ===
+                              0 && (
+                              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                                <p className="text-xs leading-5 text-amber-700">
+                                  Belum ada Fitur Utama yang dapat dijadikan
+                                  Parent pada kelompok ini. Buat Fitur Utama
+                                  terlebih dahulu.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {featureType ===
+                          "root" && (
+                          <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                            <p className="text-xs leading-5 text-blue-700">
+                              Parent tidak diperlukan karena item ini adalah{" "}
+                              <strong>
+                                Fitur Utama
+                              </strong>
+                              . Nilai `parent_feature_id` akan disimpan sebagai
+                              kosong/null.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* NAME */}
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                            Nama Fitur{" "}
+                            <span className="text-red-500">
+                              *
+                            </span>
+                          </label>
+
+                          <input
+                            name="name"
+                            value={
+                              formData.name
+                            }
+                            onChange={
+                              handleInputChange
+                            }
+                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#FF5A0A]"
+                          />
+                        </div>
+
+                        {/* SLUG */}
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                            Slug{" "}
+                            <span className="text-red-500">
+                              *
+                            </span>
+                          </label>
+
+                          <input
+                            name="slug"
+                            value={
+                              formData.slug
+                            }
+                            onChange={
+                              handleInputChange
+                            }
+                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#FF5A0A]"
+                          />
+
+                          <p className="mt-2 break-all text-xs text-slate-400">
+                            /services/
+                            {serviceSlug}
+                            /features/
+                            {formData.slug}
+                          </p>
+                        </div>
+
+                        {/* SHORT */}
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                            Deskripsi Singkat
+                          </label>
+
+                          <textarea
+                            name="short_description"
+                            value={
+                              formData.short_description
+                            }
+                            onChange={
+                              handleInputChange
+                            }
+                            rows={4}
+                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none focus:border-[#FF5A0A]"
+                          />
+                        </div>
+
+                        {/* FULL */}
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                            Deskripsi Lengkap
+                          </label>
+
+                          <textarea
+                            name="full_description"
+                            value={
+                              formData.full_description
+                            }
+                            onChange={
+                              handleInputChange
+                            }
+                            rows={8}
+                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none focus:border-[#FF5A0A]"
+                          />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                              Urutan
+                            </label>
+
+                            <input
+                              name="sort_order"
+                              type="number"
+                              min="0"
+                              value={
+                                formData.sort_order
+                              }
+                              onChange={
+                                handleInputChange
+                              }
+                              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+                              Status
+                            </label>
+
+                            <select
+                              name="status"
+                              value={
+                                formData.status
+                              }
+                              onChange={
+                                handleInputChange
+                              }
+                              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                            >
+                              {STATUS_OPTIONS.map(
+                                (
+                                  option
+                                ) => (
+                                  <option
+                                    key={
+                                      option.value
+                                    }
+                                    value={
+                                      option.value
+                                    }
+                                  >
+                                    {
+                                      option.label
+                                    }
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* IMAGE */}
+
+                      <aside>
+                        <p className="text-sm font-semibold text-[#082B3A]">
+                          Gambar Fitur
+                        </p>
+
+                        <div className="mt-3 flex h-64 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
+                          {displayedImage ? (
+                            <img
+                              src={
+                                displayedImage
+                              }
+                              alt="Preview"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-center">
+                              <ImageIcon
+                                size={
+                                  40
+                                }
+                                className="mx-auto text-slate-300"
+                              />
+
+                              <p className="mt-3 text-sm font-medium text-slate-400">
+                                Belum ada gambar
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white">
+                          <UploadCloud
+                            size={
+                              17
+                            }
+                          />
+                          Pilih Gambar
+
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={
+                              handleImageChange
+                            }
+                            className="hidden"
+                          />
+                        </label>
+
+                        {displayedImage && (
+                          <button
+                            type="button"
+                            onClick={
+                              handleRemoveImage
+                            }
+                            className="mt-3 w-full rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600"
+                          >
+                            Hapus Gambar
+                          </button>
+                        )}
+
+                        <p className="mt-3 text-xs leading-5 text-slate-400">
+                          JPG, PNG, WebP. Maksimal 2 MB.
+                        </p>
+                      </aside>
                     </div>
                   </div>
                 </div>
 
-                {/* Gambar fitur */}
-                <aside>
-                  <p className="text-sm font-semibold text-[#082B3A]">
-                    Gambar Fitur
-                  </p>
+                {/* FOOTER */}
 
-                  <div className="mt-3 flex min-h-64 items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50">
-                    {displayedImage ? (
-                      <img
-                        src={displayedImage}
-                        alt="Preview fitur"
-                        className="h-64 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="px-5 text-center">
-                        <ImageIcon
-                          size={44}
-                          className="mx-auto text-slate-300"
+                <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={
+                        closeForm
+                      }
+                      disabled={saving}
+                      className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-600"
+                    >
+                      Batal
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={
+                        saving ||
+                        !isContentManager
+                      }
+                      className="inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-6 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                    >
+                      {saving ? (
+                        <LoaderCircle
+                          size={18}
+                          className="animate-spin"
                         />
-
-                        <p className="mt-3 text-sm font-semibold text-slate-500">
-                          Gambar belum dipilih
-                        </p>
-
-                        <p className="mt-1 text-xs leading-5 text-slate-400">
-                          Gambar akan tampil
-                          pada halaman detail
-                          fitur.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0A4053]">
-                      <UploadCloud
-                        size={17}
-                      />
-
-                      Pilih Gambar
-
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={
-                          handleImageChange
-                        }
-                        className="hidden"
-                      />
-                    </label>
-
-                    {displayedImage && (
-                      <button
-                        type="button"
-                        onClick={
-                          handleRemoveImage
-                        }
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50"
-                      >
-                        <Trash2
-                          size={16}
+                      ) : (
+                        <Save
+                          size={
+                            18
+                          }
                         />
+                      )}
 
-                        Hapus Gambar
-                      </button>
-                    )}
+                      {saving
+                        ? "Menyimpan..."
+                        : editingId
+                          ? "Simpan Perubahan"
+                          : "Tambah Fitur"}
+                    </button>
                   </div>
-
-                  <p className="mt-4 text-xs leading-5 text-slate-400">
-                    Format JPG, PNG, atau
-                    WebP. Ukuran maksimal
-                    2 MB.
-                  </p>
-                </aside>
-              </div>
-
-              <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-100 bg-slate-50 px-5 py-5 sm:flex-row sm:px-7">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 disabled:opacity-50 sm:w-auto"
-                >
-                  Batal
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FF5A0A] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-orange-200 transition hover:bg-[#E94F00] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                >
-                  {saving ? (
-                    <>
-                      <LoaderCircle
-                        size={18}
-                        className="animate-spin"
-                      />
-
-                      Menyimpan...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={18} />
-
-                      {editingId
-                        ? "Simpan Perubahan"
-                        : "Tambah Detail Fitur"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
-    </section>
+    </>
   );
 }

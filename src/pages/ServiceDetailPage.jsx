@@ -3,421 +3,514 @@ import {
   useEffect,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
-  CheckCircle2,
   LoaderCircle,
   RefreshCw,
 } from "lucide-react";
+
 import {
   Link,
   useParams,
 } from "react-router-dom";
 
-import { CTA } from "../components/Common";
+import ServicePageSectionsRenderer from "../components/services/ServicePageSectionsRenderer";
 
 import {
-  getPublishedServiceBySlug,
-  getPublishedServiceFeaturesByServiceSlug,
+  useLanguage,
+} from "../contexts/LanguageContext";
+
+import {
+  getPublishedServicePageBySlug,
 } from "../services/serviceService";
 
+/* ======================================================
+   FALLBACK SECTIONS
+====================================================== */
+
+function createFallbackSections(
+  service,
+  t
+) {
+  return [
+    {
+      id: "fallback-hero",
+      section_key: "hero",
+      section_type: "hero",
+
+      eyebrow: t(
+        "serviceDetail.fallbackEyebrow"
+      ),
+
+      title:
+        service?.name || "",
+
+      description:
+        service?.short_description ||
+        "",
+
+      image_url:
+        service?.image_url || "",
+
+      button_label: t(
+        "serviceDetail.contact"
+      ),
+
+      button_url:
+        "/contact",
+
+      metadata: {},
+
+      items: [],
+
+      sort_order: 1,
+    },
+
+    {
+      id: "fallback-intro",
+      section_key: "intro",
+      section_type: "intro",
+
+      eyebrow: t(
+        "serviceDetail.fallbackIntroEyebrow"
+      ),
+
+      title:
+        service?.name || "",
+
+      description:
+        service?.full_description ||
+        service?.short_description ||
+        "",
+
+      metadata: {},
+
+      items: [],
+
+      sort_order: 2,
+    },
+
+    {
+      id: "fallback-features",
+      section_key: "features",
+      section_type: "features",
+
+      eyebrow: t(
+        "serviceDetail.fallbackFeaturesEyebrow"
+      ),
+
+      title: t(
+        "serviceDetail.fallbackFeaturesTitle"
+      ),
+
+      description: "",
+
+      metadata: {},
+
+      items: [],
+
+      sort_order: 3,
+    },
+
+    {
+      id: "fallback-cta",
+      section_key: "cta",
+      section_type: "cta",
+
+      eyebrow: t(
+        "serviceDetail.fallbackCtaEyebrow"
+      ),
+
+      title: t(
+        "serviceDetail.fallbackCtaTitle"
+      ),
+
+      description: t(
+        "serviceDetail.fallbackCtaDescription"
+      ),
+
+      button_label: t(
+        "serviceDetail.contact"
+      ),
+
+      button_url:
+        "/contact",
+
+      metadata: {},
+
+      items: [],
+
+      sort_order: 4,
+    },
+  ];
+}
+
+/* ======================================================
+   PAGE
+====================================================== */
+
 export default function ServiceDetailPage() {
-  const { slug } = useParams();
+  const {
+    slug,
+  } = useParams();
 
-  const [service, setService] =
-    useState(null);
+  const {
+    language,
+    t,
+  } = useLanguage();
 
-  const [features, setFeatures] =
-    useState([]);
+  const [
+    service,
+    setService,
+  ] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    features,
+    setFeatures,
+  ] = useState([]);
+
+  const [
+    sections,
+    setSections,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
     errorMessage,
     setErrorMessage,
   ] = useState("");
 
-  const loadService =
-    useCallback(async () => {
-      const normalizedSlug =
-        String(slug || "").trim();
+  /* ====================================================
+     LOAD
+  ==================================================== */
 
-      if (!normalizedSlug) {
-        setService(null);
-        setFeatures([]);
-        setLoading(false);
-        setErrorMessage("");
+  const loadPage =
+    useCallback(
+      async () => {
+        if (!slug) {
+          setService(null);
+          setFeatures([]);
+          setSections([]);
+          setErrorMessage("");
+          setLoading(false);
 
-        return;
-      }
+          return;
+        }
 
-      try {
-        setLoading(true);
-        setErrorMessage("");
+        try {
+          setLoading(true);
+          setErrorMessage("");
 
-        /*
-         * Mengambil data layanan utama dan
-         * detail fitur secara bersamaan.
-         */
-        const [
-          serviceData,
-          featureData,
-        ] = await Promise.all([
-          getPublishedServiceBySlug(
-            normalizedSlug
-          ),
+          /*
+           * Satu query utama.
+           *
+           * serviceService.js sudah menangani:
+           *
+           * services
+           * + service_translations
+           *
+           * sections
+           * + section_translations
+           *
+           * section items
+           * + item_translations
+           *
+           * features
+           * + feature_translations
+           *
+           * termasuk fallback EN -> ID.
+           */
+          const pageData =
+            await getPublishedServicePageBySlug(
+              slug,
+              language
+            );
 
-          getPublishedServiceFeaturesByServiceSlug(
-            normalizedSlug
-          ),
-        ]);
+          if (!pageData) {
+            setService(null);
+            setFeatures([]);
+            setSections([]);
 
-        setService(serviceData);
+            return;
+          }
 
-        setFeatures(
-          Array.isArray(featureData)
-            ? featureData
-            : []
-        );
-      } catch (error) {
-        console.error(
-          "Detail Service gagal dimuat:",
-          error
-        );
+          setService(
+            pageData
+          );
 
-        setService(null);
-        setFeatures([]);
+          setFeatures(
+            Array.isArray(
+              pageData.features
+            )
+              ? pageData.features
+              : []
+          );
 
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Detail Service gagal dimuat."
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [slug]);
+          /*
+           * serviceService.js mengembalikan:
+           *
+           * sections     = object map
+           * section_list = array
+           *
+           * Renderer membutuhkan array.
+           */
+          setSections(
+            Array.isArray(
+              pageData.section_list
+            )
+              ? pageData.section_list
+              : []
+          );
+        } catch (error) {
+          console.error(
+            "Halaman Service gagal dimuat:",
+            error
+          );
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : t(
+                  "serviceDetail.errorTitle"
+                )
+          );
+
+          setService(null);
+          setFeatures([]);
+          setSections([]);
+        } finally {
+          setLoading(false);
+        }
+      },
+      [
+        slug,
+        language,
+        t,
+      ]
+    );
 
   useEffect(() => {
-    loadService();
-  }, [loadService]);
+    loadPage();
+  }, [loadPage]);
+
+  /* ====================================================
+     SEO
+  ==================================================== */
 
   useEffect(() => {
-    if (!service?.name) {
+    if (!service) {
       return undefined;
     }
 
     const previousTitle =
       document.title;
 
-    document.title = `${
+    let descriptionMeta =
+      document.querySelector(
+        'meta[name="description"]'
+      );
+
+    const metaWasCreated =
+      !descriptionMeta;
+
+    if (!descriptionMeta) {
+      descriptionMeta =
+        document.createElement(
+          "meta"
+        );
+
+      descriptionMeta.setAttribute(
+        "name",
+        "description"
+      );
+
+      document.head.appendChild(
+        descriptionMeta
+      );
+    }
+
+    const previousDescription =
+      descriptionMeta.getAttribute(
+        "content"
+      );
+
+    document.title =
       service.seo_title ||
-      service.name
-    } | Jasa Medika Transmedic`;
+      `${service.name} | Jasa Medika Transmedic`;
+
+    descriptionMeta.setAttribute(
+      "content",
+      service.seo_description ||
+        service.short_description ||
+        ""
+    );
 
     return () => {
       document.title =
         previousTitle;
+
+      if (
+        metaWasCreated
+      ) {
+        descriptionMeta?.remove();
+
+        return;
+      }
+
+      if (
+        previousDescription !==
+        null
+      ) {
+        descriptionMeta?.setAttribute(
+          "content",
+          previousDescription
+        );
+      } else {
+        descriptionMeta?.removeAttribute(
+          "content"
+        );
+      }
     };
   }, [service]);
 
+  /* ====================================================
+     LOADING
+  ==================================================== */
+
   if (loading) {
     return (
-      <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6">
+      <main className="flex min-h-[70vh] items-center justify-center bg-white">
         <div className="text-center">
           <LoaderCircle
-            size={44}
-            className="mx-auto animate-spin text-orange"
+            size={42}
+            className="mx-auto animate-spin text-[#FF5A0A]"
           />
 
-          <h1 className="mt-5 text-xl font-bold text-[#082B3A]">
-            Memuat detail layanan
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Data sedang diambil dari
-            Supabase.
+          <p className="mt-4 font-semibold text-[#082B3A]">
+            {t(
+              "serviceDetail.loading"
+            )}
           </p>
         </div>
       </main>
     );
   }
 
+  /* ====================================================
+     ERROR
+  ==================================================== */
+
   if (errorMessage) {
     return (
-      <>
-        <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6 py-16">
-          <div className="w-full max-w-xl rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-red-600">
-              <AlertTriangle
-                size={29}
-              />
-            </div>
+      <main className="bg-white py-24">
+        <div className="container-jmt">
+          <div className="mx-auto max-w-xl rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+            <AlertTriangle
+              size={38}
+              className="mx-auto text-red-500"
+            />
 
-            <h1 className="mt-6 text-2xl font-bold text-[#082B3A]">
-              Detail layanan gagal dimuat
+            <h1 className="mt-5 text-2xl font-bold text-[#082B3A]">
+              {t(
+                "serviceDetail.errorTitle"
+              )}
             </h1>
 
-            <p className="mt-3 text-sm leading-7 text-red-600">
+            <p className="mt-3 text-sm leading-7 text-red-700">
               {errorMessage}
             </p>
 
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link
-                to="/services"
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600"
-              >
-                <ArrowLeft
-                  size={17}
-                />
+            <button
+              type="button"
+              onClick={
+                loadPage
+              }
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#082B3A] px-5 py-3 text-sm font-semibold text-white"
+            >
+              <RefreshCw
+                size={17}
+              />
 
-                Kembali
-              </Link>
-
-              <button
-                type="button"
-                onClick={loadService}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
-              >
-                <RefreshCw
-                  size={17}
-                />
-
-                Coba Lagi
-              </button>
-            </div>
+              {t(
+                "serviceDetail.retry"
+              )}
+            </button>
           </div>
-        </main>
-
-        <CTA />
-      </>
+        </div>
+      </main>
     );
   }
 
+  /* ====================================================
+     NOT FOUND
+  ==================================================== */
+
   if (!service) {
     return (
-      <>
-        <main className="flex min-h-[65vh] items-center justify-center bg-slate-50 px-6 py-16">
-          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange/10 font-bold text-orange">
-              404
-            </div>
-
-            <h1 className="mt-6 text-3xl font-bold text-[#082B3A]">
-              Layanan tidak ditemukan
+      <main className="bg-white py-24">
+        <div className="container-jmt">
+          <div className="mx-auto max-w-xl text-center">
+            <h1 className="text-3xl font-bold text-[#082B3A]">
+              {t(
+                "serviceDetail.notFoundTitle"
+              )}
             </h1>
 
-            <p className="mt-4 text-sm leading-7 text-slate-500">
-              Layanan tidak tersedia,
-              belum dipublikasikan, atau
-              slug tidak sesuai.
+            <p className="mt-3 text-sm leading-7 text-slate-500">
+              {t(
+                "serviceDetail.notFoundDescription"
+              )}
             </p>
 
             <Link
               to="/services"
-              className="mt-8 inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3 text-sm font-semibold text-white"
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-5 py-3 text-sm font-semibold text-white"
             >
               <ArrowLeft
                 size={17}
               />
 
-              Kembali ke Layanan
+              {t(
+                "serviceDetail.backToServices"
+              )}
             </Link>
           </div>
-        </main>
-
-        <CTA />
-      </>
+        </div>
+      </main>
     );
   }
 
-  const servicesBackUrl =
-    service.category_slug
-      ? `/services?category=${encodeURIComponent(
-          service.category_slug
-        )}`
-      : "/services";
+  /* ====================================================
+     CMS / FALLBACK
+  ==================================================== */
 
-  const currentServiceSlug =
-    String(
-      service.slug || slug || ""
-    ).trim();
+  const finalSections =
+    sections.length > 0
+      ? sections
+      : createFallbackSections(
+          service,
+          t
+        );
 
   return (
-    <>
-      <main>
-        {/* Hero detail */}
-        <section className="border-b border-slate-200 bg-gradient-to-br from-white via-cream/40 to-mist">
-          <div className="container-jmt py-14 md:py-20">
-            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-              <Link
-                to="/"
-                className="hover:text-orange"
-              >
-                Home
-              </Link>
-
-              <span>/</span>
-
-              <Link
-                to={servicesBackUrl}
-                className="hover:text-orange"
-              >
-                Product & Services
-              </Link>
-
-              <span>/</span>
-
-              <span className="font-medium text-[#082B3A]">
-                {service.name}
-              </span>
-            </nav>
-
-            <div className="mt-10 grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
-                  {service.category_name ||
-                    "Healthcare Service"}
-                </p>
-
-                <h1 className="mt-4 text-4xl font-bold leading-tight text-[#082B3A] md:text-5xl">
-                  {service.name}
-                </h1>
-
-                {service.short_description && (
-                  <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600">
-                    {
-                      service.short_description
-                    }
-                  </p>
-                )}
-
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <Link
-                    to="/contact"
-                    className="inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3.5 text-sm font-semibold text-white"
-                  >
-                    Konsultasikan Kebutuhan
-
-                    <ArrowRight
-                      size={18}
-                    />
-                  </Link>
-
-                  <Link
-                    to={servicesBackUrl}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-700"
-                  >
-                    <ArrowLeft
-                      size={18}
-                    />
-
-                    Kembali ke Kategori
-                  </Link>
-                </div>
-              </div>
-
-              <div>
-                {service.image_url ? (
-                  <img
-                    src={
-                      service.image_url
-                    }
-                    alt={service.name}
-                    className="h-72 w-full rounded-3xl border border-slate-200 object-cover shadow-soft md:h-96"
-                  />
-                ) : (
-                  <div className="flex h-72 items-center justify-center rounded-3xl border border-slate-200 bg-white shadow-soft md:h-96">
-                    <CheckCircle2
-                      size={60}
-                      className="text-orange"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Isi detail */}
-        <section className="container-jmt py-14 md:py-20">
-          <div className="mx-auto max-w-5xl">
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
-              Tentang Layanan
-            </p>
-
-            <h2 className="mt-3 text-3xl font-bold text-[#082B3A]">
-              Solusi untuk kebutuhan
-              organisasi Anda
-            </h2>
-
-            <div className="mt-6 whitespace-pre-line text-base leading-9 text-slate-600">
-              {service.full_description ||
-                "Informasi lengkap layanan belum tersedia."}
-            </div>
-
-            {/* Data berasal dari service_features */}
-            {features.length > 0 && (
-              <div className="mt-12">
-                <p className="text-sm font-bold uppercase tracking-[0.16em] text-orange">
-                  Fitur dan Cakupan
-                </p>
-
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {features.map(
-                    (
-                      feature,
-                      index
-                    ) => (
-                      <Link
-                        key={
-                          feature.id ||
-                          `${feature.slug}-${index}`
-                        }
-                        to={`/services/${currentServiceSlug}/features/${feature.slug}`}
-                        aria-label={`Lihat detail ${feature.name}`}
-                        className="group flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-orange hover:bg-orange/5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange/20"
-                      >
-                        <div className="flex min-w-0 items-start gap-3">
-                          <CheckCircle2
-                            size={20}
-                            className="mt-0.5 shrink-0 text-orange"
-                          />
-
-                          <div className="min-w-0">
-                            <span className="block text-sm font-semibold leading-6 text-slate-600 transition group-hover:text-[#082B3A]">
-                              {feature.name}
-                            </span>
-
-                            {feature.short_description && (
-                              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-400">
-                                {
-                                  feature.short_description
-                                }
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <ArrowUpRight
-                          size={18}
-                          className="shrink-0 text-slate-300 transition duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-orange"
-                        />
-                      </Link>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
-      </main>
-
-      <CTA />
-    </>
+    <main className="overflow-hidden bg-white">
+      <ServicePageSectionsRenderer
+        service={
+          service
+        }
+        sections={
+          finalSections
+        }
+        features={
+          features
+        }
+      />
+    </main>
   );
 }

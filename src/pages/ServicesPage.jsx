@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,31 +13,47 @@ import {
   Search,
   Stethoscope,
 } from "lucide-react";
+
 import {
   Link,
   useSearchParams,
 } from "react-router-dom";
 
 import {
-  CTA,
   PageHero,
 } from "../components/Common";
 
 import {
   getActiveServiceCategories,
+  getProductServicesMegaMenuData,
   getPublishedServicesForPublic,
 } from "../services/serviceService";
 
+import {
+  useLanguage,
+} from "../contexts/LanguageContext";
+
+/*
+ * ======================================================
+ * HELPERS
+ * ======================================================
+ */
+
 function getServiceIcon(iconName) {
-  const normalizedIcon = String(
-    iconName || ""
-  )
-    .trim()
-    .toLowerCase();
+  const normalizedIcon =
+    String(
+      iconName || ""
+    )
+      .trim()
+      .toLowerCase();
 
   if (
-    normalizedIcon.includes("heart") ||
-    normalizedIcon.includes("pulse")
+    normalizedIcon.includes(
+      "heart"
+    ) ||
+    normalizedIcon.includes(
+      "pulse"
+    )
   ) {
     return HeartPulse;
   }
@@ -44,47 +61,159 @@ function getServiceIcon(iconName) {
   return Stethoscope;
 }
 
+function normalizeLegacyFeatures(
+  features
+) {
+  if (!Array.isArray(features)) {
+    return [];
+  }
+
+  return features
+    .map((feature) => {
+      if (
+        typeof feature === "string"
+      ) {
+        return feature.trim();
+      }
+
+      if (
+        feature &&
+        typeof feature === "object"
+      ) {
+        return String(
+          feature.name || ""
+        ).trim();
+      }
+
+      return "";
+    })
+    .filter(Boolean);
+}
+
+/*
+ * ======================================================
+ * LOADING SKELETON
+ * ======================================================
+ */
+
 function ServicesLoading() {
   return (
     <div className="mt-10 grid gap-6 lg:grid-cols-2">
-      {[1, 2, 3, 4].map((item) => (
-        <div
-          key={item}
-          className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white p-7"
-        >
-          <div className="flex gap-4">
-            <div className="h-14 w-14 rounded-xl bg-slate-200" />
+      {[1, 2, 3, 4].map(
+        (item) => (
+          <div
+            key={item}
+            className="h-72 animate-pulse rounded-2xl border border-slate-200 bg-white p-7"
+          >
+            <div className="flex gap-4">
+              <div className="h-14 w-14 rounded-xl bg-slate-200" />
 
-            <div className="flex-1">
-              <div className="h-3 w-32 rounded bg-slate-200" />
-              <div className="mt-4 h-6 w-3/4 rounded bg-slate-200" />
-              <div className="mt-4 h-4 w-full rounded bg-slate-100" />
-              <div className="mt-2 h-4 w-2/3 rounded bg-slate-100" />
+              <div className="flex-1">
+                <div className="h-3 w-32 rounded bg-slate-200" />
+
+                <div className="mt-4 h-6 w-3/4 rounded bg-slate-200" />
+
+                <div className="mt-4 h-4 w-full rounded bg-slate-100" />
+
+                <div className="mt-2 h-4 w-2/3 rounded bg-slate-100" />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        )
+      )}
     </div>
   );
 }
 
+/*
+ * ======================================================
+ * CTA
+ * ======================================================
+ */
+
+function ServicesCTA({
+  t,
+}) {
+  return (
+    <section className="container-jmt pb-14 md:pb-20">
+      <div className="relative overflow-hidden rounded-3xl bg-[#082B3A] px-6 py-12 text-center text-white md:px-10 md:py-16">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-orange/20 blur-3xl" />
+
+        <div className="pointer-events-none absolute -bottom-24 left-16 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange">
+            {t(
+              "servicesPage.contactEyebrow"
+            )}
+          </p>
+
+          <h2 className="mt-4 text-3xl font-bold leading-tight md:text-4xl">
+            {t(
+              "servicesPage.contactTitle"
+            )}
+          </h2>
+
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-white/70 md:text-base">
+            {t(
+              "servicesPage.contactDescription"
+            )}
+          </p>
+
+          <Link
+            to="/contact"
+            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            {t(
+              "servicesPage.contactButton"
+            )}
+
+            <ArrowRight
+              size={17}
+            />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/*
+ * ======================================================
+ * PAGE
+ * ======================================================
+ */
+
 export default function ServicesPage() {
+  const {
+    language,
+    t,
+  } = useLanguage();
+
   const [
     searchParams,
     setSearchParams,
   ] = useSearchParams();
 
-  const [categories, setCategories] =
-    useState([]);
+  const [
+    categories,
+    setCategories,
+  ] = useState([]);
 
-  const [services, setServices] =
-    useState([]);
+  const [
+    services,
+    setServices,
+  ] = useState([]);
 
-  const [query, setQuery] =
-    useState("");
+  const [
+    query,
+    setQuery,
+  ] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
   const [
     errorMessage,
@@ -92,72 +221,350 @@ export default function ServicesPage() {
   ] = useState("");
 
   const categoryParameter =
-    searchParams.get("category") || "all";
+    searchParams.get(
+      "category"
+    ) || "all";
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
+  /*
+   * ====================================================
+   * LOAD DATA
+   * ====================================================
+   *
+   * 1. categoryData
+   *    → service_categories
+   *
+   * 2. baseServiceData
+   *    → data struktur service:
+   *      category_id, image_url, icon, dll.
+   *
+   * 3. translatedServiceData
+   *    → service + feature translation
+   *      berdasarkan language.
+   *
+   * Slug dan struktur database tidak diterjemahkan.
+   */
 
-      const [
-        categoryData,
-        serviceData,
-      ] = await Promise.all([
-        getActiveServiceCategories(),
-        getPublishedServicesForPublic(),
-      ]);
+  const loadData =
+    useCallback(
+      async () => {
+        try {
+          setLoading(true);
+          setErrorMessage("");
 
-      setCategories(
-        Array.isArray(categoryData)
-          ? categoryData
-          : []
-      );
+          const [
+            categoryData,
+            baseServiceData,
+            translatedServiceData,
+          ] =
+            await Promise.all([
+              getActiveServiceCategories(),
 
-      setServices(
-        Array.isArray(serviceData)
-          ? serviceData
-          : []
-      );
-    } catch (error) {
-      console.error(
-        "Product & Services gagal dimuat:",
-        error
-      );
+              getPublishedServicesForPublic(),
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Product & Services gagal dimuat."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+              getProductServicesMegaMenuData(
+                language
+              ),
+            ]);
+
+          const normalizedCategories =
+            Array.isArray(
+              categoryData
+            )
+              ? categoryData
+              : [];
+
+          const normalizedBaseServices =
+            Array.isArray(
+              baseServiceData
+            )
+              ? baseServiceData
+              : [];
+
+          const normalizedTranslations =
+            Array.isArray(
+              translatedServiceData
+            )
+              ? translatedServiceData
+              : [];
+
+          /*
+           * Translation dicari berdasarkan
+           * service ID.
+           */
+
+          const translationMap =
+            new Map(
+              normalizedTranslations.map(
+                (
+                  translatedService
+                ) => [
+                  translatedService.id,
+                  translatedService,
+                ]
+              )
+            );
+
+          /*
+           * =================================================
+           * MERGE:
+           *
+           * BASE SERVICE
+           * +
+           * TRANSLATED SERVICE
+           * =================================================
+           */
+
+          const mergedServices =
+            normalizedBaseServices.map(
+              (
+                baseService
+              ) => {
+                const translatedService =
+                  translationMap.get(
+                    baseService.id
+                  );
+
+                /*
+                 * Feature dari mega menu
+                 * berbentuk object.
+                 *
+                 * Untuk card ServicesPage,
+                 * kita hanya membutuhkan
+                 * nama feature.
+                 */
+
+                const translatedFeatures =
+                  Array.isArray(
+                    translatedService
+                      ?.features
+                  )
+                    ? translatedService.features
+                        .map(
+                          (
+                            feature
+                          ) =>
+                            String(
+                              feature
+                                ?.name ||
+                                ""
+                            ).trim()
+                        )
+                        .filter(
+                          Boolean
+                        )
+                    : [];
+
+                const baseFeatures =
+                  normalizeLegacyFeatures(
+                    baseService.features
+                  );
+
+                return {
+                  /*
+                   * Data struktur:
+                   * category_id
+                   * image_url
+                   * icon
+                   * slug
+                   * dll.
+                   */
+                  ...baseService,
+
+                  /*
+                   * Konten bilingual.
+                   */
+                  name:
+                    translatedService
+                      ?.name ||
+                    baseService.name,
+
+                  short_description:
+                    translatedService
+                      ?.short_description ||
+                    baseService.short_description,
+
+                  /*
+                   * Kalau translation feature
+                   * tersedia gunakan EN/ID hasil
+                   * serviceService.
+                   *
+                   * Kalau tidak tersedia,
+                   * fallback ke legacy features.
+                   */
+                  features:
+                    translatedFeatures.length >
+                    0
+                      ? translatedFeatures
+                      : baseFeatures,
+
+                  translation_locale:
+                    translatedService
+                      ?.translation_locale ||
+                    "id",
+                };
+              }
+            );
+
+          setCategories(
+            normalizedCategories
+          );
+
+          setServices(
+            mergedServices
+          );
+        } catch (error) {
+          console.error(
+            "Products & Services gagal dimuat:",
+            error
+          );
+
+          setCategories([]);
+          setServices([]);
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "LOAD_ERROR"
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [
+        language,
+      ]
+    );
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const categoryMap = useMemo(() => {
-    return new Map(
-      categories.map((category) => [
-        category.id,
-        category,
-      ])
+  /*
+   * ====================================================
+   * SEO
+   * ====================================================
+   */
+
+  useEffect(() => {
+    const previousTitle =
+      document.title;
+
+    let descriptionMeta =
+      document.querySelector(
+        'meta[name="description"]'
+      );
+
+    const metaWasCreated =
+      !descriptionMeta;
+
+    if (!descriptionMeta) {
+      descriptionMeta =
+        document.createElement(
+          "meta"
+        );
+
+      descriptionMeta.setAttribute(
+        "name",
+        "description"
+      );
+
+      document.head.appendChild(
+        descriptionMeta
+      );
+    }
+
+    const previousDescription =
+      descriptionMeta.getAttribute(
+        "content"
+      );
+
+    document.title =
+      language === "en"
+        ? "Products & Services | Jasa Medika Transmedic"
+        : "Produk & Layanan | Jasa Medika Transmedic";
+
+    descriptionMeta.setAttribute(
+      "content",
+      t(
+        "servicesPage.description"
+      )
     );
-  }, [categories]);
+
+    return () => {
+      document.title =
+        previousTitle;
+
+      if (metaWasCreated) {
+        descriptionMeta?.remove();
+
+        return;
+      }
+
+      if (
+        previousDescription !==
+        null
+      ) {
+        descriptionMeta?.setAttribute(
+          "content",
+          previousDescription
+        );
+      } else {
+        descriptionMeta?.removeAttribute(
+          "content"
+        );
+      }
+    };
+  }, [
+    language,
+    t,
+  ]);
+
+  /*
+   * ====================================================
+   * CATEGORY MAP
+   * ====================================================
+   */
+
+  const categoryMap =
+    useMemo(() => {
+      return new Map(
+        categories.map(
+          (category) => [
+            category.id,
+            category,
+          ]
+        )
+      );
+    }, [categories]);
+
+  /*
+   * ====================================================
+   * MERGE CATEGORY
+   * ====================================================
+   */
 
   const servicesWithCategory =
     useMemo(() => {
-      return services.map((service) => ({
-        ...service,
+      return services.map(
+        (service) => ({
+          ...service,
 
-        category:
-          categoryMap.get(
-            service.category_id
-          ) || null,
-      }));
-    }, [services, categoryMap]);
+          category:
+            categoryMap.get(
+              service.category_id
+            ) || null,
+        })
+      );
+    }, [
+      services,
+      categoryMap,
+    ]);
+
+  /*
+   * ====================================================
+   * SELECTED CATEGORY
+   * ====================================================
+   */
 
   const selectedCategory =
     useMemo(() => {
@@ -174,59 +581,81 @@ export default function ServicesPage() {
     ]);
 
   const activeCategory =
-    selectedCategory?.slug || "all";
+    selectedCategory?.slug ||
+    "all";
 
-  const filteredServices = useMemo(() => {
-    const normalizedQuery = query
-      .trim()
-      .toLowerCase();
+  /*
+   * ====================================================
+   * FILTER + SEARCH
+   * ====================================================
+   */
 
-    return servicesWithCategory.filter(
-      (service) => {
-        const matchesCategory =
-          activeCategory === "all" ||
-          service.category?.slug ===
-            activeCategory;
+  const filteredServices =
+    useMemo(() => {
+      const normalizedQuery =
+        query
+          .trim()
+          .toLowerCase();
 
-        const features = Array.isArray(
-          service.features
-        )
-          ? service.features
-          : [];
+      return servicesWithCategory.filter(
+        (service) => {
+          const matchesCategory =
+            activeCategory ===
+              "all" ||
+            service.category
+              ?.slug ===
+              activeCategory;
 
-        const searchableText = [
-          service.name,
-          service.slug,
-          service.short_description,
-          service.full_description,
-          service.category?.name,
-          ...features,
-        ]
-          .map((value) =>
-            String(value || "")
-              .toLowerCase()
-          )
-          .join(" ");
+          const features =
+            normalizeLegacyFeatures(
+              service.features
+            );
 
-        const matchesSearch =
-          !normalizedQuery ||
-          searchableText.includes(
-            normalizedQuery
+          const searchableText =
+            [
+              service.name,
+              service.slug,
+              service.short_description,
+              service.full_description,
+              service.category
+                ?.name,
+              ...features,
+            ]
+              .map(
+                (value) =>
+                  String(
+                    value || ""
+                  ).toLowerCase()
+              )
+              .join(" ");
+
+          const matchesSearch =
+            !normalizedQuery ||
+            searchableText.includes(
+              normalizedQuery
+            );
+
+          return (
+            matchesCategory &&
+            matchesSearch
           );
+        }
+      );
+    }, [
+      activeCategory,
+      query,
+      servicesWithCategory,
+    ]);
 
-        return (
-          matchesCategory &&
-          matchesSearch
-        );
-      }
-    );
-  }, [
-    activeCategory,
-    query,
-    servicesWithCategory,
-  ]);
+  /*
+   * ====================================================
+   * CATEGORY CHANGE
+   * ====================================================
+   */
 
-  function handleCategoryChange(event) {
+  function handleCategoryChange(
+    event
+  ) {
     const nextCategory =
       event.target.value;
 
@@ -235,8 +664,12 @@ export default function ServicesPage() {
         searchParams
       );
 
-    if (nextCategory === "all") {
-      nextParams.delete("category");
+    if (
+      nextCategory === "all"
+    ) {
+      nextParams.delete(
+        "category"
+      );
     } else {
       nextParams.set(
         "category",
@@ -244,10 +677,19 @@ export default function ServicesPage() {
       );
     }
 
-    setSearchParams(nextParams, {
-      replace: true,
-    });
+    setSearchParams(
+      nextParams,
+      {
+        replace: true,
+      }
+    );
   }
+
+  /*
+   * ====================================================
+   * RESET FILTER
+   * ====================================================
+   */
 
   function resetFilters() {
     setQuery("");
@@ -257,33 +699,71 @@ export default function ServicesPage() {
         searchParams
       );
 
-    nextParams.delete("category");
+    nextParams.delete(
+      "category"
+    );
 
-    setSearchParams(nextParams, {
-      replace: true,
-    });
+    setSearchParams(
+      nextParams,
+      {
+        replace: true,
+      }
+    );
   }
+
+  /*
+   * ====================================================
+   * EMPTY CATEGORY STATE
+   * ====================================================
+   */
 
   const categoryHasNoServices =
     activeCategory !== "all" &&
     !query.trim() &&
-    filteredServices.length === 0;
+    filteredServices.length ===
+      0;
+
+  /*
+   * ====================================================
+   * RENDER
+   * ====================================================
+   */
 
   return (
     <>
+      {/* =================================================
+          HERO
+      ================================================= */}
+
       <PageHero
-        eyebrow="Product & Services"
-        title="Integrated Healthcare Solutions"
-        description="Empowering healthcare providers through integrated digital solutions, professional consulting, IT infrastructure, and workforce development."
+        eyebrow={t(
+          "servicesPage.eyebrow"
+        )}
+        title={t(
+          "servicesPage.title"
+        )}
+        description={t(
+          "servicesPage.description"
+        )}
       />
 
-      <section className="container-jmt py-14 md:py-20">
+      {/* =================================================
+          SERVICES
+      ================================================= */}
 
-        {/* Search dan filter */}
+      <section className="container-jmt py-14 md:py-20">
+        {/* ===============================================
+            SEARCH + FILTER
+        =============================================== */}
+
         <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft md:flex-row">
+          {/* SEARCH */}
+
           <label className="relative flex-1">
             <span className="sr-only">
-              Cari layanan
+              {t(
+                "servicesPage.searchLabel"
+              )}
             </span>
 
             <Search
@@ -294,39 +774,57 @@ export default function ServicesPage() {
             <input
               type="search"
               value={query}
-              onChange={(event) =>
+              onChange={(
+                event
+              ) =>
                 setQuery(
                   event.target.value
                 )
               }
-              placeholder="Cari nama atau fitur layanan..."
+              placeholder={t(
+                "servicesPage.searchPlaceholder"
+              )}
               className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/10"
             />
           </label>
 
+          {/* CATEGORY FILTER */}
+
           <label>
             <span className="sr-only">
-              Filter kategori
+              {t(
+                "servicesPage.categoryFilterLabel"
+              )}
             </span>
 
             <select
-              value={activeCategory}
+              value={
+                activeCategory
+              }
               onChange={
                 handleCategoryChange
               }
               className="w-full min-w-72 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/10"
             >
               <option value="all">
-                Semua Kategori
+                {t(
+                  "servicesPage.allCategories"
+                )}
               </option>
 
               {categories.map(
                 (category) => (
                   <option
-                    key={category.id}
-                    value={category.slug}
+                    key={
+                      category.id
+                    }
+                    value={
+                      category.slug
+                    }
                   >
-                    {category.name}
+                    {
+                      category.name
+                    }
                   </option>
                 )
               )}
@@ -334,86 +832,144 @@ export default function ServicesPage() {
           </label>
         </div>
 
-        {loading && <ServicesLoading />}
+        {/* ===============================================
+            LOADING
+        =============================================== */}
 
-        {!loading && errorMessage && (
-          <div className="mt-10 rounded-3xl border border-red-200 bg-red-50 px-6 py-12 text-center">
-            <AlertTriangle
-              size={34}
-              className="mx-auto text-red-600"
-            />
-
-            <h2 className="mt-4 text-xl font-bold text-[#082B3A]">
-              Layanan gagal dimuat
-            </h2>
-
-            <p className="mt-3 text-sm text-red-700">
-              {errorMessage}
+        {loading && (
+          <>
+            <p className="mt-8 text-center text-sm font-medium text-slate-500">
+              {t(
+                "servicesPage.loading"
+              )}
             </p>
 
-            <button
-              type="button"
-              onClick={loadData}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
-            >
-              <RefreshCw size={17} />
-              Coba Lagi
-            </button>
-          </div>
+            <ServicesLoading />
+          </>
         )}
+
+        {/* ===============================================
+            ERROR
+        =============================================== */}
+
+        {!loading &&
+          errorMessage && (
+            <div className="mt-10 rounded-3xl border border-red-200 bg-red-50 px-6 py-12 text-center">
+              <AlertTriangle
+                size={34}
+                className="mx-auto text-red-600"
+              />
+
+              <h2 className="mt-4 text-xl font-bold text-[#082B3A]">
+                {t(
+                  "servicesPage.errorTitle"
+                )}
+              </h2>
+
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-red-700">
+                {t(
+                  "servicesPage.errorDescription"
+                )}
+              </p>
+
+              <button
+                type="button"
+                onClick={
+                  loadData
+                }
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
+              >
+                <RefreshCw
+                  size={17}
+                />
+
+                {t(
+                  "servicesPage.retry"
+                )}
+              </button>
+            </div>
+          )}
+
+        {/* ===============================================
+            SERVICE CARDS
+        =============================================== */}
 
         {!loading &&
           !errorMessage &&
-          filteredServices.length > 0 && (
+          filteredServices.length >
+            0 && (
             <div className="mt-10 grid gap-6 lg:grid-cols-2">
               {filteredServices.map(
-                (service) => {
+                (
+                  service
+                ) => {
                   const Icon =
                     getServiceIcon(
                       service.icon
                     );
 
                   const features =
-                    Array.isArray(
+                    normalizeLegacyFeatures(
                       service.features
-                    )
-                      ? service.features
-                      : [];
+                    );
 
                   return (
                     <article
-                      key={service.id}
+                      key={
+                        service.id
+                      }
                       className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
                     >
+                      {/* IMAGE */}
+
                       {service.image_url && (
                         <div className="overflow-hidden bg-slate-100">
                           <img
                             src={
                               service.image_url
                             }
-                            alt={service.name}
+                            alt={
+                              service.name
+                            }
                             loading="lazy"
                             className="aspect-[16/7] w-full object-cover transition duration-500 group-hover:scale-105"
                           />
                         </div>
                       )}
 
+                      {/* CONTENT */}
+
                       <div className="flex flex-1 flex-col p-7 md:p-8">
                         <div className="flex items-start gap-4">
+                          {/* ICON */}
+
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-cream text-orange">
-                            <Icon size={28} />
+                            <Icon
+                              size={28}
+                            />
                           </div>
 
                           <div className="min-w-0">
+                            {/* CATEGORY */}
+
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-orange">
-                              {service.category
+                              {service
+                                .category
                                 ?.name ||
-                                "Healthcare Service"}
+                                t(
+                                  "servicesPage.defaultCategory"
+                                )}
                             </p>
 
+                            {/* NAME */}
+
                             <h2 className="text-xl font-bold leading-7 text-[#082B3A]">
-                              {service.name}
+                              {
+                                service.name
+                              }
                             </h2>
+
+                            {/* DESCRIPTION */}
 
                             {service.short_description && (
                               <p className="mt-3 text-sm leading-7 text-slate-500">
@@ -425,32 +981,44 @@ export default function ServicesPage() {
                           </div>
                         </div>
 
-                        {features.length > 0 && (
+                        {/* FEATURE TAGS */}
+
+                        {features.length >
+                          0 && (
                           <div className="mt-6 flex flex-wrap gap-2">
                             {features
-                              .slice(0, 3)
+                              .slice(
+                                0,
+                                3
+                              )
                               .map(
                                 (
                                   feature,
                                   index
                                 ) => (
                                   <span
-                                    key={`${feature}-${index}`}
+                                    key={`${service.id}-${feature}-${index}`}
                                     className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600"
                                   >
-                                    {feature}
+                                    {
+                                      feature
+                                    }
                                   </span>
                                 )
                               )}
                           </div>
                         )}
 
+                        {/* LINK */}
+
                         <div className="mt-auto pt-7">
                           <Link
                             to={`/services/${service.slug}`}
                             className="inline-flex items-center gap-2 text-sm font-semibold text-orange transition hover:underline"
                           >
-                            Pelajari Selengkapnya
+                            {t(
+                              "servicesPage.learnMore"
+                            )}
 
                             <ArrowRight
                               size={17}
@@ -466,9 +1034,14 @@ export default function ServicesPage() {
             </div>
           )}
 
+        {/* ===============================================
+            EMPTY STATE
+        =============================================== */}
+
         {!loading &&
           !errorMessage &&
-          filteredServices.length === 0 && (
+          filteredServices.length ===
+            0 && (
             <div className="mt-10 rounded-3xl border border-slate-200 bg-slate-50 px-6 py-14 text-center">
               {categoryHasNoServices ? (
                 <>
@@ -478,18 +1051,29 @@ export default function ServicesPage() {
                   />
 
                   <h2 className="mt-5 text-xl font-bold text-[#082B3A]">
-                    Belum ada layanan pada
-                    kategori ini
+                    {t(
+                      "servicesPage.emptyCategoryTitle"
+                    )}
                   </h2>
 
                   <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-slate-500">
-                    Kategori{" "}
-                    <strong>
-                      {selectedCategory?.name}
-                    </strong>{" "}
-                    sudah tersedia, tetapi belum
-                    memiliki produk atau layanan
-                    berstatus Published.
+                    {t(
+                      "servicesPage.emptyCategoryDescription"
+                    )}
+
+                    {selectedCategory
+                      ?.name && (
+                      <>
+                        {" "}
+
+                        <strong>
+                          {
+                            selectedCategory.name
+                          }
+                        </strong>
+                        .
+                      </>
+                    )}
                   </p>
                 </>
               ) : (
@@ -500,28 +1084,41 @@ export default function ServicesPage() {
                   />
 
                   <h2 className="mt-5 text-xl font-bold text-[#082B3A]">
-                    Layanan tidak ditemukan
+                    {t(
+                      "servicesPage.noResultsTitle"
+                    )}
                   </h2>
 
                   <p className="mt-3 text-sm text-slate-500">
-                    Tidak ada layanan yang sesuai
-                    dengan pencarian Anda.
+                    {t(
+                      "servicesPage.noResultsDescription"
+                    )}
                   </p>
                 </>
               )}
 
               <button
                 type="button"
-                onClick={resetFilters}
+                onClick={
+                  resetFilters
+                }
                 className="mt-6 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
               >
-                Tampilkan Semua Layanan
+                {t(
+                  "servicesPage.showAllServices"
+                )}
               </button>
             </div>
           )}
       </section>
 
-      <CTA />
+      {/* =================================================
+          CTA
+      ================================================= */}
+
+      <ServicesCTA
+        t={t}
+      />
     </>
   );
 }

@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -14,7 +15,6 @@ import {
   Handshake,
   ImageIcon,
   Landmark,
-  LoaderCircle,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -27,172 +27,63 @@ import {
   SectionHeading,
 } from "../../components/Common";
 
-import { getCompanyPartners } from "../../services/companyService";
+import {
+  getCompanyPartners,
+} from "../../services/companyService";
 
-/*
- * Data cadangan mengikuti daftar partner
- * pada website JMT sebelumnya.
- *
- * Data ini hanya digunakan apabila tabel
- * partners masih kosong atau gagal dimuat.
- */
-const fallbackPartners = [
-  {
-    id: "fallback-kemenkes",
-    name: "Kementrian Kesehatan Republik Indonesia",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 1,
-    is_active: true,
-  },
-  {
-    id: "fallback-dto",
-    name: "Digital Transformasi Office",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 2,
-    is_active: true,
-  },
-  {
-    id: "fallback-bpjs",
-    name: "BPJS Kesehatan",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 3,
-    is_active: true,
-  },
-  {
-    id: "fallback-samsung",
-    name: "Samsung",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 4,
-    is_active: true,
-  },
-  {
-    id: "fallback-telkom",
-    name: "Telkom Indonesia",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 5,
-    is_active: true,
-  },
-  {
-    id: "fallback-ocbc-nisp",
-    name: "OCBC NISP",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 6,
-    is_active: true,
-  },
-  {
-    id: "fallback-bni",
-    name: "BNI",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 7,
-    is_active: true,
-  },
-  {
-    id: "fallback-indofarma",
-    name: "Indofarma",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 8,
-    is_active: true,
-  },
-  {
-    id: "fallback-pesona",
-    name: "Pesona Group",
-    logo_url: "",
-    website_url: "",
-    description:
-      "PT. Pesona Scientific & Pesona Satwa.",
-    sort_order: 9,
-    is_active: true,
-  },
-  {
-    id: "fallback-artha-graha",
-    name: "Bank Artha Graha Internasional",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 10,
-    is_active: true,
-  },
-  {
-    id: "fallback-bank-bjb",
-    name: "Bank BJB",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 11,
-    is_active: true,
-  },
-  {
-    id: "fallback-bni-network",
-    name: "BNI Network",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 12,
-    is_active: true,
-  },
-  {
-    id: "fallback-bank-ocbc",
-    name: "Bank OCBC",
-    logo_url: "",
-    website_url: "",
-    description:
-      "Partner perusahaan Jasa Medika Transmedic.",
-    sort_order: 13,
-    is_active: true,
-  },
-];
+import {
+  useLanguage,
+} from "../../contexts/LanguageContext";
 
-const filterOptions = [
-  {
-    value: "all",
-    label: "Semua Partner",
-  },
-  {
-    value: "with-logo",
-    label: "Memiliki Logo",
-  },
-  {
-    value: "with-website",
-    label: "Memiliki Website",
-  },
-];
 
-/*
- * Menghasilkan huruf singkatan ketika
- * logo partner belum tersedia.
- */
+function createFallbackPartners(
+  language
+) {
+  const description =
+    language === "en"
+      ? "A strategic partner of Jasa Medika Transmedic."
+      : "Partner strategis Jasa Medika Transmedic.";
+
+  return [
+    ["fallback-kemenkes", "Kementrian Kesehatan Republik Indonesia"],
+    ["fallback-dto", "Digital Transformasi Office"],
+    ["fallback-bpjs", "BPJS Kesehatan"],
+    ["fallback-samsung", "Samsung"],
+    ["fallback-telkom", "Telkom Indonesia"],
+    ["fallback-ocbc-nisp", "OCBC NISP"],
+    ["fallback-bni", "BNI"],
+    ["fallback-indofarma", "Indofarma"],
+    ["fallback-pesona", "Pesona Group"],
+    ["fallback-artha-graha", "Bank Artha Graha Internasional"],
+    ["fallback-bank-bjb", "Bank BJB"],
+    ["fallback-bni-network", "BNI Network"],
+    ["fallback-bank-ocbc", "Bank OCBC"],
+  ].map(
+    ([id, name], index) => ({
+      id,
+      name,
+      logo_url: "",
+      website_url: "",
+      description:
+        id === "fallback-pesona"
+          ? language === "en"
+            ? "PT Pesona Scientific & Pesona Satwa."
+            : "PT. Pesona Scientific & Pesona Satwa."
+          : description,
+      sort_order:
+        index + 1,
+      is_active: true,
+    })
+  );
+}
+
+
 function getPartnerInitials(name) {
-  const words = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const words =
+    String(name || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
 
   if (words.length === 0) {
     return "PT";
@@ -206,40 +97,67 @@ function getPartnerInitials(name) {
 
   return words
     .slice(0, 2)
-    .map((word) => word.charAt(0))
+    .map(
+      (word) =>
+        word.charAt(0)
+    )
     .join("")
     .toUpperCase();
 }
 
-function sortPartners(items) {
+
+function sortPartners(
+  items,
+  language = "id"
+) {
   return [...items].sort(
-    (firstPartner, secondPartner) => {
+    (
+      firstPartner,
+      secondPartner
+    ) => {
       const firstOrder =
-        Number(firstPartner.sort_order) || 0;
+        Number(
+          firstPartner.sort_order
+        ) || 0;
 
       const secondOrder =
-        Number(secondPartner.sort_order) || 0;
+        Number(
+          secondPartner.sort_order
+        ) || 0;
 
-      if (firstOrder !== secondOrder) {
-        return firstOrder - secondOrder;
+      if (
+        firstOrder !==
+        secondOrder
+      ) {
+        return (
+          firstOrder -
+          secondOrder
+        );
       }
 
-      return String(firstPartner.name || "")
-        .localeCompare(
-          String(secondPartner.name || ""),
-          "id"
-        );
+      return String(
+        firstPartner.name || ""
+      ).localeCompare(
+        String(
+          secondPartner.name ||
+            ""
+        ),
+        language === "en"
+          ? "en"
+          : "id"
+      );
     }
   );
 }
 
-/*
- * Logo partner memiliki fallback apabila
- * URL kosong atau gambar gagal dimuat.
- */
-function PartnerLogo({ partner }) {
-  const [imageFailed, setImageFailed] =
-    useState(false);
+
+function PartnerLogo({
+  partner,
+}) {
+  const [
+    imageFailed,
+    setImageFailed,
+  ] = useState(false);
 
   if (
     partner.logo_url &&
@@ -248,11 +166,17 @@ function PartnerLogo({ partner }) {
     return (
       <div className="flex h-28 items-center justify-center rounded-2xl border border-slate-100 bg-white p-5">
         <img
-          src={partner.logo_url}
+          src={
+            partner.logo_url
+          }
           alt={`Logo ${partner.name}`}
           className="max-h-20 max-w-full object-contain transition duration-300 group-hover:scale-105"
           loading="lazy"
-          onError={() => setImageFailed(true)}
+          onError={() =>
+            setImageFailed(
+              true
+            )
+          }
         />
       </div>
     );
@@ -265,11 +189,14 @@ function PartnerLogo({ partner }) {
       <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-orange/10 blur-xl" />
 
       <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-xl font-bold text-white backdrop-blur">
-        {getPartnerInitials(partner.name)}
+        {getPartnerInitials(
+          partner.name
+        )}
       </div>
     </div>
   );
 }
+
 
 function PartnersPageLoading() {
   return (
@@ -279,9 +206,7 @@ function PartnersPageLoading() {
       <section className="container-jmt py-20">
         <div className="mx-auto max-w-3xl">
           <div className="mx-auto h-5 w-32 animate-pulse rounded bg-slate-200" />
-
           <div className="mx-auto mt-5 h-12 w-2/3 animate-pulse rounded-xl bg-slate-200" />
-
           <div className="mx-auto mt-5 h-4 w-full animate-pulse rounded bg-slate-100" />
         </div>
 
@@ -300,160 +225,271 @@ function PartnersPageLoading() {
   );
 }
 
+
 export default function CompanyPartnersPage() {
-  const [partners, setPartners] = useState([]);
+  const {
+    language,
+    t,
+  } = useLanguage();
 
-  const [searchTerm, setSearchTerm] =
-    useState("");
+  const tr = useCallback(
+    (idText, enText) =>
+      language === "en"
+        ? enText
+        : idText,
+    [language]
+  );
 
-  const [selectedFilter, setSelectedFilter] =
-    useState("all");
+  const [
+    partners,
+    setPartners,
+  ] = useState([]);
+
+  const [
+    searchTerm,
+    setSearchTerm,
+  ] = useState("");
+
+  const [
+    selectedFilter,
+    setSelectedFilter,
+  ] = useState("all");
 
   const [loading, setLoading] =
     useState(true);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  const [usingFallback, setUsingFallback] =
-    useState(false);
+  const [
+    usingFallback,
+    setUsingFallback,
+  ] = useState(false);
 
-  const loadPartners = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
-      setUsingFallback(false);
 
-      const data = await getCompanyPartners();
+  const filterOptions =
+    useMemo(
+      () => [
+        {
+          value: "all",
+          label: tr(
+            "Semua Partner",
+            "All Partners"
+          ),
+        },
+        {
+          value: "with-logo",
+          label: tr(
+            "Memiliki Logo",
+            "With Logo"
+          ),
+        },
+        {
+          value:
+            "with-website",
+          label: tr(
+            "Memiliki Website",
+            "With Website"
+          ),
+        },
+      ],
+      [tr]
+    );
 
-      if (
-        Array.isArray(data) &&
-        data.length > 0
-      ) {
-        setPartners(sortPartners(data));
-        return;
+
+  const loadPartners =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+        setUsingFallback(false);
+
+        const data =
+          await getCompanyPartners(
+            language
+          );
+
+        if (
+          Array.isArray(data) &&
+          data.length > 0
+        ) {
+          setPartners(
+            sortPartners(
+              data,
+              language
+            )
+          );
+
+          return;
+        }
+
+        setPartners(
+          createFallbackPartners(
+            language
+          )
+        );
+
+        setUsingFallback(true);
+      } catch (error) {
+        console.error(
+          "Partner perusahaan gagal dimuat:",
+          error
+        );
+
+        setPartners(
+          createFallbackPartners(
+            language
+          )
+        );
+
+        setUsingFallback(true);
+        setErrorMessage(
+          "LOAD_ERROR"
+        );
+      } finally {
+        setLoading(false);
       }
+    }, [
+      language,
+    ]);
 
-      /*
-       * Tabel tersedia tetapi belum mempunyai
-       * partner aktif.
-       */
-      setPartners(fallbackPartners);
-      setUsingFallback(true);
-    } catch (error) {
-      console.error(
-        "Partner perusahaan gagal dimuat:",
-        error
-      );
-
-      setPartners(fallbackPartners);
-      setUsingFallback(true);
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Partner perusahaan gagal dimuat."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     loadPartners();
   }, [loadPartners]);
 
-  const partnerSummary = useMemo(() => {
-    return {
-      total: partners.length,
 
-      withLogo: partners.filter(
-        (partner) =>
-          Boolean(
-            String(
-              partner.logo_url || ""
-            ).trim()
-          )
-      ).length,
+  const partnerSummary =
+    useMemo(() => ({
+      total:
+        partners.length,
 
-      withWebsite: partners.filter(
-        (partner) =>
-          Boolean(
-            String(
-              partner.website_url || ""
-            ).trim()
-          )
-      ).length,
-    };
-  }, [partners]);
+      withLogo:
+        partners.filter(
+          (partner) =>
+            Boolean(
+              String(
+                partner.logo_url ||
+                  ""
+              ).trim()
+            )
+        ).length,
 
-  const filteredPartners = useMemo(() => {
-    const normalizedSearch = searchTerm
-      .trim()
-      .toLowerCase();
+      withWebsite:
+        partners.filter(
+          (partner) =>
+            Boolean(
+              String(
+                partner.website_url ||
+                  ""
+              ).trim()
+            )
+        ).length,
+    }), [partners]);
 
-    return partners.filter((partner) => {
-      const searchableText = [
-        partner.name,
-        partner.description,
-      ]
-        .map((value) =>
-          String(value || "").toLowerCase()
-        )
-        .join(" ");
 
-      const matchesSearch =
-        !normalizedSearch ||
-        searchableText.includes(
-          normalizedSearch
-        );
+  const filteredPartners =
+    useMemo(() => {
+      const normalizedSearch =
+        searchTerm
+          .trim()
+          .toLowerCase();
 
-      let matchesFilter = true;
+      return partners.filter(
+        (partner) => {
+          const searchableText =
+            [
+              partner.name,
+              partner.description,
+            ]
+              .map((value) =>
+                String(
+                  value || ""
+                ).toLowerCase()
+              )
+              .join(" ");
 
-      if (selectedFilter === "with-logo") {
-        matchesFilter = Boolean(
-          String(
-            partner.logo_url || ""
-          ).trim()
-        );
-      }
+          const matchesSearch =
+            !normalizedSearch ||
+            searchableText.includes(
+              normalizedSearch
+            );
 
-      if (
-        selectedFilter === "with-website"
-      ) {
-        matchesFilter = Boolean(
-          String(
-            partner.website_url || ""
-          ).trim()
-        );
-      }
+          let matchesFilter =
+            true;
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [
-    partners,
-    searchTerm,
-    selectedFilter,
-  ]);
+          if (
+            selectedFilter ===
+            "with-logo"
+          ) {
+            matchesFilter =
+              Boolean(
+                String(
+                  partner.logo_url ||
+                    ""
+                ).trim()
+              );
+          }
+
+          if (
+            selectedFilter ===
+            "with-website"
+          ) {
+            matchesFilter =
+              Boolean(
+                String(
+                  partner.website_url ||
+                    ""
+                ).trim()
+              );
+          }
+
+          return (
+            matchesSearch &&
+            matchesFilter
+          );
+        }
+      );
+    }, [
+      partners,
+      searchTerm,
+      selectedFilter,
+    ]);
+
 
   function resetFilters() {
     setSearchTerm("");
-    setSelectedFilter("all");
+    setSelectedFilter(
+      "all"
+    );
   }
+
 
   if (loading) {
     return <PartnersPageLoading />;
   }
 
+
   return (
     <>
       <PageHero
-        eyebrow="Company — Partners"
-        title="Growing Through Strategic Collaboration"
-        description="Membangun kolaborasi dengan institusi pemerintah, perusahaan teknologi, lembaga keuangan, dan berbagai mitra strategis."
+        eyebrow={t(
+          "company.partnersPage.heroEyebrow",
+          "Perusahaan — Mitra"
+        )}
+        title={t(
+          "company.partnersPage.heroTitle",
+          "Kolaborasi untuk Membangun Ekosistem yang Lebih Kuat"
+        )}
+        description={t(
+          "company.partnersPage.heroDescription",
+          "JMT berkolaborasi dengan berbagai institusi dan organisasi untuk mendukung transformasi layanan kesehatan dan teknologi."
+        )}
       />
 
-      {/* Informasi error */}
+
       {errorMessage && (
         <section className="container-jmt pt-8">
           <div className="flex flex-col justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center">
@@ -465,47 +501,68 @@ export default function CompanyPartnersPage() {
 
               <div>
                 <p className="font-semibold text-amber-800">
-                  Data Supabase belum dapat dimuat
+                  {tr(
+                    "Data Supabase belum dapat dimuat",
+                    "Supabase data could not be loaded"
+                  )}
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  {errorMessage} Halaman sedang
-                  menampilkan daftar partner dari
-                  website sebelumnya.
+                  {tr(
+                    "Halaman sedang menampilkan daftar partner cadangan.",
+                    "The page is currently displaying the fallback partner list."
+                  )}
                 </p>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={loadPartners}
+              onClick={
+                loadPartners
+              }
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
             >
-              <RefreshCw size={16} />
-              Muat Ulang
+              <RefreshCw
+                size={16}
+              />
+
+              {t(
+                "company.common.reload",
+                "Muat Ulang"
+              )}
             </button>
           </div>
         </section>
       )}
 
-      {/* Pendahuluan */}
+
       <section className="container-jmt py-20">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)] lg:items-center">
           <div>
             <SectionHeading
-              kicker="Our Partner Companies"
-              title="Kolaborasi untuk menciptakan dampak yang lebih luas"
-              description="JMT Group membangun kemitraan strategis untuk memperkuat inovasi, teknologi, pembiayaan, dan layanan kesehatan yang terintegrasi."
+              kicker={tr(
+                "Perusahaan Mitra Kami",
+                "Our Partner Companies"
+              )}
+              title={tr(
+                "Kolaborasi untuk menciptakan dampak yang lebih luas",
+                "Collaboration to create a broader impact"
+              )}
+              description={tr(
+                "JMT Group membangun kemitraan strategis untuk memperkuat inovasi, teknologi, pembiayaan, dan layanan kesehatan yang terintegrasi.",
+                "JMT Group builds strategic partnerships to strengthen innovation, technology, financing, and integrated healthcare services."
+              )}
             />
 
             <p className="mt-7 max-w-3xl text-base leading-8 text-slate-600">
-              Setiap kolaborasi menjadi bagian
-              penting dalam menghadirkan solusi yang
-              relevan, berkelanjutan, dan memberikan
-              nilai tambah bagi fasilitas kesehatan
-              serta masyarakat.
+              {tr(
+                "Setiap kolaborasi menjadi bagian penting dalam menghadirkan solusi yang relevan, berkelanjutan, dan memberikan nilai tambah bagi fasilitas kesehatan serta masyarakat.",
+                "Each collaboration plays an important role in delivering relevant, sustainable solutions that create added value for healthcare facilities and communities."
+              )}
             </p>
           </div>
+
 
           <div className="grid grid-cols-2 gap-4">
             <article className="rounded-3xl bg-[#082B3A] p-6 text-white">
@@ -519,9 +576,13 @@ export default function CompanyPartnersPage() {
               </p>
 
               <p className="mt-2 text-sm text-white/60">
-                Partner terdaftar
+                {tr(
+                  "Partner terdaftar",
+                  "Registered partners"
+                )}
               </p>
             </article>
+
 
             <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <Globe2
@@ -530,24 +591,35 @@ export default function CompanyPartnersPage() {
               />
 
               <p className="mt-8 text-4xl font-bold text-ink">
-                {partnerSummary.withWebsite}
+                {
+                  partnerSummary.withWebsite
+                }
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
-                Website tersedia
+                {tr(
+                  "Website tersedia",
+                  "Websites available"
+                )}
               </p>
             </article>
+
 
             <article className="col-span-2 rounded-3xl bg-gradient-to-r from-orange to-[#FF7A35] p-6 text-white">
               <div className="flex items-center justify-between gap-5">
                 <div>
                   <p className="text-3xl font-bold">
-                    Strategic Partnership
+                    {tr(
+                      "Kemitraan Strategis",
+                      "Strategic Partnership"
+                    )}
                   </p>
 
                   <p className="mt-2 text-sm text-white/80">
-                    Kolaborasi lintas industri dan
-                    institusi.
+                    {tr(
+                      "Kolaborasi lintas industri dan institusi.",
+                      "Cross-industry and institutional collaboration."
+                    )}
                   </p>
                 </div>
 
@@ -561,55 +633,78 @@ export default function CompanyPartnersPage() {
         </div>
       </section>
 
-      {/* Daftar partner */}
+
       <section className="bg-mist py-20">
         <div className="container-jmt">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">
-                Partner Directory
+                {tr(
+                  "Direktori Partner",
+                  "Partner Directory"
+                )}
               </p>
 
               <h2 className="mt-3 text-3xl font-bold text-ink md:text-4xl">
-                Daftar Partner
+                {tr(
+                  "Daftar Partner",
+                  "Partner List"
+                )}
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-                Temukan partner berdasarkan nama
-                atau ketersediaan informasi.
+                {tr(
+                  "Temukan partner berdasarkan nama atau ketersediaan informasi.",
+                  "Find partners by name or available information."
+                )}
               </p>
             </div>
 
             <p className="text-sm text-slate-500">
-              Menampilkan{" "}
+              {tr(
+                "Menampilkan",
+                "Showing"
+              )}{" "}
               <span className="font-bold text-ink">
-                {filteredPartners.length}
+                {
+                  filteredPartners.length
+                }
               </span>{" "}
-              dari{" "}
+              {tr(
+                "dari",
+                "of"
+              )}{" "}
               <span className="font-bold text-ink">
-                {partners.length}
+                {
+                  partners.length
+                }
               </span>{" "}
-              partner
+              {tr(
+                "partner",
+                "partners"
+              )}
             </p>
           </div>
 
-          {usingFallback && !errorMessage && (
-            <div className="mt-8 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
-              <CheckCircle2
-                size={20}
-                className="mt-0.5 shrink-0 text-blue-600"
-              />
 
-              <p className="text-sm leading-6 text-blue-700">
-                Tabel partners belum memiliki data
-                aktif. Halaman sedang menampilkan
-                daftar partner dari website
-                sebelumnya.
-              </p>
-            </div>
-          )}
+          {usingFallback &&
+            !errorMessage && (
+              <div className="mt-8 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4">
+                <CheckCircle2
+                  size={20}
+                  className="mt-0.5 shrink-0 text-blue-600"
+                />
 
-          {/* Pencarian dan dropdown */}
+                <p className="text-sm leading-6 text-blue-700">
+                  {tr(
+                    "Tabel partners belum memiliki data aktif. Halaman sedang menampilkan daftar partner cadangan.",
+                    "The partners table does not currently contain active data. The page is displaying a fallback partner list."
+                  )}
+                </p>
+              </div>
+            )}
+
+
           <div className="mt-10 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-[minmax(0,1fr)_250px_auto]">
             <div className="relative">
               <Search
@@ -621,7 +716,10 @@ export default function CompanyPartnersPage() {
                 htmlFor="partner-search"
                 className="sr-only"
               >
-                Cari partner
+                {tr(
+                  "Cari partner",
+                  "Search partners"
+                )}
               </label>
 
               <input
@@ -633,22 +731,31 @@ export default function CompanyPartnersPage() {
                     event.target.value
                   )
                 }
-                placeholder="Cari nama partner..."
+                placeholder={tr(
+                  "Cari nama partner...",
+                  "Search partner name..."
+                )}
                 className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-orange focus:ring-2 focus:ring-orange/10"
               />
             </div>
+
 
             <div>
               <label
                 htmlFor="partner-filter"
                 className="sr-only"
               >
-                Filter partner
+                {tr(
+                  "Filter partner",
+                  "Partner filter"
+                )}
               </label>
 
               <select
                 id="partner-filter"
-                value={selectedFilter}
+                value={
+                  selectedFilter
+                }
                 onChange={(event) =>
                   setSelectedFilter(
                     event.target.value
@@ -656,16 +763,25 @@ export default function CompanyPartnersPage() {
                 }
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-ink outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/10"
               >
-                {filterOptions.map((option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ))}
+                {filterOptions.map(
+                  (option) => (
+                    <option
+                      key={
+                        option.value
+                      }
+                      value={
+                        option.value
+                      }
+                    >
+                      {
+                        option.label
+                      }
+                    </option>
+                  )
+                )}
               </select>
             </div>
+
 
             <button
               type="button"
@@ -676,7 +792,9 @@ export default function CompanyPartnersPage() {
             </button>
           </div>
 
-          {filteredPartners.length === 0 ? (
+
+          {filteredPartners.length ===
+          0 ? (
             <div className="mt-10 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
               <ImageIcon
                 size={40}
@@ -684,12 +802,17 @@ export default function CompanyPartnersPage() {
               />
 
               <h3 className="mt-5 text-xl font-bold text-ink">
-                Partner tidak ditemukan
+                {tr(
+                  "Partner tidak ditemukan",
+                  "Partner not found"
+                )}
               </h3>
 
               <p className="mt-2 text-sm text-slate-500">
-                Tidak ada partner yang sesuai
-                dengan pencarian atau filter.
+                {tr(
+                  "Tidak ada partner yang sesuai dengan pencarian atau filter.",
+                  "No partners match your search or selected filter."
+                )}
               </p>
 
               <button
@@ -697,7 +820,10 @@ export default function CompanyPartnersPage() {
                 onClick={resetFilters}
                 className="mt-6 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
               >
-                Tampilkan Semua
+                {tr(
+                  "Tampilkan Semua",
+                  "Show All"
+                )}
               </button>
             </div>
           ) : (
@@ -707,13 +833,17 @@ export default function CompanyPartnersPage() {
                   const cardContent = (
                     <>
                       <PartnerLogo
-                        partner={partner}
+                        partner={
+                          partner
+                        }
                       />
 
                       <div className="flex flex-1 flex-col p-6">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange/10 text-orange">
-                            <Building2 size={19} />
+                            <Building2
+                              size={19}
+                            />
                           </div>
 
                           {partner.website_url && (
@@ -725,18 +855,27 @@ export default function CompanyPartnersPage() {
                         </div>
 
                         <h3 className="mt-5 text-lg font-bold leading-7 text-ink">
-                          {partner.name}
+                          {
+                            partner.name
+                          }
                         </h3>
 
                         <p className="mt-3 flex-1 text-sm leading-7 text-slate-500">
                           {partner.description ||
-                            "Partner strategis Jasa Medika Transmedic."}
+                            tr(
+                              "Partner strategis Jasa Medika Transmedic.",
+                              "A strategic partner of Jasa Medika Transmedic."
+                            )}
                         </p>
 
                         <div className="mt-6 border-t border-slate-100 pt-5">
                           {partner.website_url ? (
                             <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-orange">
-                              Kunjungi Website
+                              {t(
+                                "company.partnersPage.visitWebsite",
+                                "Kunjungi Website"
+                              )}
+
                               <ExternalLink
                                 size={14}
                               />
@@ -746,7 +885,11 @@ export default function CompanyPartnersPage() {
                               <ShieldCheck
                                 size={14}
                               />
-                              Strategic Partner
+
+                              {tr(
+                                "Mitra Strategis",
+                                "Strategic Partner"
+                              )}
                             </span>
                           )}
                         </div>
@@ -754,11 +897,17 @@ export default function CompanyPartnersPage() {
                     </>
                   );
 
-                  if (partner.website_url) {
+                  if (
+                    partner.website_url
+                  ) {
                     return (
                       <a
-                        key={partner.id}
-                        href={partner.website_url}
+                        key={
+                          partner.id
+                        }
+                        href={
+                          partner.website_url
+                        }
                         target="_blank"
                         rel="noreferrer"
                         className="group flex overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
@@ -772,7 +921,9 @@ export default function CompanyPartnersPage() {
 
                   return (
                     <article
-                      key={partner.id}
+                      key={
+                        partner.id
+                      }
                       className="group flex overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
                     >
                       <div className="flex w-full flex-col">
@@ -787,7 +938,7 @@ export default function CompanyPartnersPage() {
         </div>
       </section>
 
-      {/* Penutup */}
+
       <section className="container-jmt py-20">
         <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#082B3A] via-[#0A4053] to-teal p-8 text-white md:p-12">
           <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full border border-white/10" />
@@ -802,24 +953,31 @@ export default function CompanyPartnersPage() {
               />
 
               <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-orange">
-                Strategic Collaboration
+                {tr(
+                  "Kolaborasi Strategis",
+                  "Strategic Collaboration"
+                )}
               </p>
 
               <h2 className="mt-4 text-3xl font-bold leading-tight md:text-4xl">
-                Bersama membangun ekosistem
-                kesehatan yang lebih kuat
+                {tr(
+                  "Bersama membangun ekosistem kesehatan yang lebih kuat",
+                  "Building a stronger healthcare ecosystem together"
+                )}
               </h2>
 
               <p className="mt-6 text-base leading-8 text-white/70">
-                JMT Group terbuka untuk kolaborasi
-                strategis dalam teknologi,
-                operasional, fasilitas, pelatihan,
-                dan layanan kesehatan.
+                {tr(
+                  "JMT Group terbuka untuk kolaborasi strategis dalam teknologi, operasional, fasilitas, pelatihan, dan layanan kesehatan.",
+                  "JMT Group welcomes strategic collaboration across technology, operations, facilities, training, and healthcare services."
+                )}
               </p>
             </div>
 
             <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/10 bg-white/10 text-orange backdrop-blur">
-              <Handshake size={42} />
+              <Handshake
+                size={42}
+              />
             </div>
           </div>
         </div>

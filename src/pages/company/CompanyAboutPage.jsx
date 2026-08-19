@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -39,156 +40,19 @@ import {
   getActiveCertifications,
 } from "../../services/companyCredentialService";
 
+import {
+  useLanguage,
+} from "../../contexts/LanguageContext";
+
 import gedungPerusahaan from "../../assets/images/gedung.webp";
 
-/*
- * Informasi bidang usaha mengikuti
- * struktur website JMT sebelumnya.
- */
-const businessUnits = [
-  {
-    title: "Healthcare Operator",
-    description:
-      "Solusi manajemen dan operasional layanan kesehatan, termasuk sistem digital terintegrasi serta pendampingan transformasi rumah sakit dan klinik.",
-    icon: HeartPulse,
-  },
-  {
-    title: "Facility Management",
-    description:
-      "Layanan perencanaan, desain, manajemen teknik, interior, dan pengelolaan fasilitas untuk mendukung operasional yang optimal.",
-    icon: Building2,
-  },
-  {
-    title: "Industry Training",
-    description:
-      "Program pelatihan berbasis kebutuhan industri teknologi informasi dengan pendekatan praktis dan materi yang relevan.",
-    icon: GraduationCap,
-  },
-  {
-    title: "Supply Chain Management",
-    description:
-      "Pengelolaan rantai pasok yang terintegrasi untuk mendukung ketersediaan logistik, peralatan medis, dan kebutuhan operasional.",
-    icon: PackageCheck,
-  },
-];
 
-/*
- * Data statistik mengikuti informasi
- * yang ditampilkan pada website lama.
- */
-const companyStatistics = [
-  {
-    value: "100+",
-    label: "Klien Fasilitas Kesehatan",
-    description:
-      "Rumah sakit, klinik, dan fasilitas pelayanan kesehatan di berbagai wilayah Indonesia.",
-    icon: Building2,
-  },
-  {
-    value: "150+",
-    label: "Tenaga Profesional",
-    description:
-      "Programmer dan tenaga profesional yang mendukung pengembangan serta implementasi solusi.",
-    icon: UsersRound,
-  },
-  {
-    value: "20+",
-    label: "Tahun Pengalaman",
-    description:
-      "Pengalaman ekosistem perusahaan dalam teknologi informasi dan layanan kesehatan.",
-    icon: ShieldCheck,
-  },
-];
-
-/*
- * Daftar perusahaan yang ditampilkan
- * pada bagian Corporate Holding.
- */
-const subsidiaryItems = [
-  {
-    name: "Netkrom Solusindo",
-    category:
-      "Network Infrastructure & Software Engineering",
-    description:
-      "Berfokus pada layanan jaringan komputer, rekayasa perangkat lunak, dan implementasi teknologi informasi untuk sektor kesehatan, pemerintah, dan perusahaan.",
-    website:
-      "https://netkromsolution.com",
-    icon: Cpu,
-  },
-  {
-    name: "Transindo Data Perkasa",
-    category:
-      "Healthcare Information System",
-    description:
-      "Penyedia layanan Sistem Informasi Manajemen Rumah Sakit berbasis web untuk fasilitas kesehatan, pemerintah, dan sektor swasta.",
-    website:
-      "https://transindodata.com",
-    icon: HeartPulse,
-  },
-  {
-    name: "Jasamedika Saranatama",
-    category:
-      "Hospital Information System",
-    description:
-      "Perusahaan pengembang Sistem Informasi Manajemen Rumah Sakit yang telah menghadirkan berbagai solusi digital untuk fasilitas kesehatan Indonesia.",
-    website:
-      "https://jasamedika.co.id",
-    icon: Building2,
-  },
-  {
-    name: "TéMP",
-    category:
-      "Facility & Interior Management",
-    description:
-      "Penyedia solusi furnitur, interior, dan pengelolaan fasilitas dengan pendekatan terintegrasi sesuai kebutuhan mitra dan klien.",
-    website:
-      "https://temp.co.id",
-    icon: Factory,
-  },
-  {
-    name: "Multi Variat Indonesia",
-    category: "Internet of Things",
-    description:
-      "Mengembangkan solusi Internet of Things untuk mendukung integrasi perangkat, data, dan sistem operasional.",
-    website: "",
-    icon: Sparkles,
-  },
-  {
-    name: "Trisprima Usahajaya",
-    category:
-      "Healthcare Logistics Management",
-    description:
-      "Mendukung pengelolaan logistik farmasi, alat kesehatan, dan bahan medis habis pakai agar lebih terpantau dan efisien.",
-    website:
-      "https://trisprima.com",
-    icon: PackageCheck,
-  },
-];
-
-const fallbackDescription =
-  "Jasa Medika Transmedic Group adalah grup perusahaan yang berfokus pada inovasi dan pengembangan solusi terintegrasi di bidang layanan kesehatan. JMT Group menjadi mitra strategis bagi rumah sakit, klinik, dan institusi pendidikan kesehatan dalam menghadirkan sistem manajemen yang andal, efisien, dan berbasis teknologi.";
-
-const fallbackVision =
-  "Menjadi perusahaan terdepan dalam menyediakan dan mengembangkan solusi teknologi informasi yang tepat bagi fasilitas kesehatan di Indonesia.";
-
-const fallbackMission = [
-  "Mengembangkan perangkat lunak Sistem Informasi Manajemen Rumah Sakit dan solusi kesehatan yang berkualitas.",
-  "Memberikan layanan konsultasi dalam bidang teknologi informasi rumah sakit dan layanan kesehatan.",
-  "Menghadirkan solusi yang meningkatkan efektivitas penggunaan sistem informasi kesehatan.",
-  "Mendukung kegiatan pendidikan dan penelitian dalam bidang sistem informasi serta layanan kesehatan.",
-];
-
-/*
- * Mengubah teks misi menjadi array.
- *
- * Mendukung misi yang disimpan menggunakan:
- * - baris baru;
- * - tanda titik koma;
- * - format JSON array.
- */
-function normalizeMissionList(value) {
+function normalizeMissionList(
+  value,
+  fallbackItems = []
+) {
   if (!value) {
-    return fallbackMission;
+    return fallbackItems;
   }
 
   if (Array.isArray(value)) {
@@ -200,13 +64,13 @@ function normalizeMissionList(value) {
 
     return result.length > 0
       ? result
-      : fallbackMission;
+      : fallbackItems;
   }
 
   const text = String(value).trim();
 
   if (!text) {
-    return fallbackMission;
+    return fallbackItems;
   }
 
   try {
@@ -238,8 +102,9 @@ function normalizeMissionList(value) {
 
   return result.length > 0
     ? result
-    : fallbackMission;
+    : fallbackItems;
 }
+
 
 function getCertificationCategoryClass(
   category
@@ -263,6 +128,7 @@ function getCertificationCategoryClass(
   }
 }
 
+
 function AboutPageLoading() {
   return (
     <>
@@ -279,9 +145,7 @@ function AboutPageLoading() {
 
             <div className="mt-8 space-y-3">
               <div className="h-4 animate-pulse rounded bg-slate-100" />
-
               <div className="h-4 animate-pulse rounded bg-slate-100" />
-
               <div className="h-4 w-4/5 animate-pulse rounded bg-slate-100" />
             </div>
           </div>
@@ -291,7 +155,21 @@ function AboutPageLoading() {
   );
 }
 
+
 export default function CompanyAboutPage() {
+  const {
+    language,
+    t,
+  } = useLanguage();
+
+  const tr = useCallback(
+    (idText, enText) =>
+      language === "en"
+        ? enText
+        : idText,
+    [language]
+  );
+
   const [profile, setProfile] =
     useState(null);
 
@@ -311,6 +189,202 @@ export default function CompanyAboutPage() {
     setErrorMessage,
   ] = useState("");
 
+
+  const fallbackMission = useMemo(
+    () => [
+      t(
+        "company.aboutPage.fallbackMission1",
+        "Mengembangkan perangkat lunak Sistem Informasi Manajemen Rumah Sakit dan solusi kesehatan yang berkualitas."
+      ),
+      t(
+        "company.aboutPage.fallbackMission2",
+        "Memberikan layanan konsultasi dalam bidang teknologi informasi rumah sakit dan layanan kesehatan."
+      ),
+      t(
+        "company.aboutPage.fallbackMission3",
+        "Menghadirkan solusi yang meningkatkan efektivitas penggunaan sistem informasi kesehatan."
+      ),
+      t(
+        "company.aboutPage.fallbackMission4",
+        "Mendukung kegiatan pendidikan dan penelitian dalam bidang sistem informasi serta layanan kesehatan."
+      ),
+    ],
+    [language, t]
+  );
+
+
+  const businessUnits = useMemo(
+    () => [
+      {
+        title: t(
+          "company.aboutPage.healthcareOperator",
+          "Operator Layanan Kesehatan"
+        ),
+        description: t(
+          "company.aboutPage.healthcareOperatorDescription",
+          "Solusi manajemen dan operasional layanan kesehatan, termasuk sistem digital terintegrasi serta pendampingan transformasi rumah sakit dan klinik."
+        ),
+        icon: HeartPulse,
+      },
+      {
+        title: t(
+          "company.aboutPage.facilityManagement",
+          "Manajemen Fasilitas"
+        ),
+        description: t(
+          "company.aboutPage.facilityManagementDescription",
+          "Layanan perencanaan, desain, manajemen teknik, interior, dan pengelolaan fasilitas untuk mendukung operasional yang optimal."
+        ),
+        icon: Building2,
+      },
+      {
+        title: t(
+          "company.aboutPage.industryTraining",
+          "Pelatihan Industri"
+        ),
+        description: t(
+          "company.aboutPage.industryTrainingDescription",
+          "Program pelatihan berbasis kebutuhan industri teknologi informasi dengan pendekatan praktis dan materi yang relevan."
+        ),
+        icon: GraduationCap,
+      },
+      {
+        title: t(
+          "company.aboutPage.supplyChain",
+          "Manajemen Rantai Pasok"
+        ),
+        description: t(
+          "company.aboutPage.supplyChainDescription",
+          "Pengelolaan rantai pasok yang terintegrasi untuk mendukung ketersediaan logistik, peralatan medis, dan kebutuhan operasional."
+        ),
+        icon: PackageCheck,
+      },
+    ],
+    [language, t]
+  );
+
+
+  const companyStatistics = useMemo(
+    () => [
+      {
+        value: "100+",
+        label: t(
+          "company.aboutPage.healthcareClients",
+          "Klien Fasilitas Kesehatan"
+        ),
+        description: t(
+          "company.aboutPage.healthcareClientsDescription",
+          "Rumah sakit, klinik, dan fasilitas pelayanan kesehatan di berbagai wilayah Indonesia."
+        ),
+        icon: Building2,
+      },
+      {
+        value: "150+",
+        label: t(
+          "company.aboutPage.professionals",
+          "Tenaga Profesional"
+        ),
+        description: t(
+          "company.aboutPage.professionalsDescription",
+          "Programmer dan tenaga profesional yang mendukung pengembangan serta implementasi solusi."
+        ),
+        icon: UsersRound,
+      },
+      {
+        value: "20+",
+        label: t(
+          "company.aboutPage.yearsExperience",
+          "Tahun Pengalaman"
+        ),
+        description: t(
+          "company.aboutPage.yearsExperienceDescription",
+          "Pengalaman ekosistem perusahaan dalam teknologi informasi dan layanan kesehatan."
+        ),
+        icon: ShieldCheck,
+      },
+    ],
+    [language, t]
+  );
+
+
+  const subsidiaryItems = useMemo(
+    () => [
+      {
+        name: "Netkrom Solusindo",
+        category:
+          "Network Infrastructure & Software Engineering",
+        description: t(
+          "company.aboutPage.subsidiaryNetkrom",
+          "Berfokus pada layanan jaringan komputer, rekayasa perangkat lunak, dan implementasi teknologi informasi untuk sektor kesehatan, pemerintah, dan perusahaan."
+        ),
+        website:
+          "https://netkromsolution.com",
+        icon: Cpu,
+      },
+      {
+        name: "Transindo Data Perkasa",
+        category:
+          "Healthcare Information System",
+        description: t(
+          "company.aboutPage.subsidiaryTransindo",
+          "Penyedia layanan Sistem Informasi Manajemen Rumah Sakit berbasis web untuk fasilitas kesehatan, pemerintah, dan sektor swasta."
+        ),
+        website:
+          "https://transindodata.com",
+        icon: HeartPulse,
+      },
+      {
+        name: "Jasamedika Saranatama",
+        category:
+          "Hospital Information System",
+        description: t(
+          "company.aboutPage.subsidiaryJasamedika",
+          "Perusahaan pengembang Sistem Informasi Manajemen Rumah Sakit yang telah menghadirkan berbagai solusi digital untuk fasilitas kesehatan Indonesia."
+        ),
+        website:
+          "https://jasamedika.co.id",
+        icon: Building2,
+      },
+      {
+        name: "TéMP",
+        category:
+          "Facility & Interior Management",
+        description: t(
+          "company.aboutPage.subsidiaryTemp",
+          "Penyedia solusi furnitur, interior, dan pengelolaan fasilitas dengan pendekatan terintegrasi sesuai kebutuhan mitra dan klien."
+        ),
+        website:
+          "https://temp.co.id",
+        icon: Factory,
+      },
+      {
+        name: "Multi Variat Indonesia",
+        category:
+          "Internet of Things",
+        description: t(
+          "company.aboutPage.subsidiaryMvi",
+          "Mengembangkan solusi Internet of Things untuk mendukung integrasi perangkat, data, dan sistem operasional."
+        ),
+        website: "",
+        icon: Sparkles,
+      },
+      {
+        name: "Trisprima Usahajaya",
+        category:
+          "Healthcare Logistics Management",
+        description: t(
+          "company.aboutPage.subsidiaryTrisprima",
+          "Mendukung pengelolaan logistik farmasi, alat kesehatan, dan bahan medis habis pakai agar lebih terpantau dan efisien."
+        ),
+        website:
+          "https://trisprima.com",
+        icon: PackageCheck,
+      },
+    ],
+    [language, t]
+  );
+
+
   const loadCompanyData =
     useCallback(async () => {
       try {
@@ -319,9 +393,17 @@ export default function CompanyAboutPage() {
 
         const results =
           await Promise.allSettled([
-            getCompanyProfile(),
-            getActiveCertifications(),
-            getActiveAwards(),
+            getCompanyProfile(
+  language
+),
+
+getActiveCertifications(
+  language
+),
+
+getActiveAwards(
+  language
+),
           ]);
 
         const [
@@ -343,7 +425,10 @@ export default function CompanyAboutPage() {
           setProfile(null);
 
           failedModules.push(
-            "profil perusahaan"
+            tr(
+              "profil perusahaan",
+              "company profile"
+            )
           );
 
           console.error(
@@ -367,7 +452,10 @@ export default function CompanyAboutPage() {
           setCertifications([]);
 
           failedModules.push(
-            "sertifikasi"
+            tr(
+              "sertifikasi",
+              "certifications"
+            )
           );
 
           console.error(
@@ -391,7 +479,10 @@ export default function CompanyAboutPage() {
           setAwards([]);
 
           failedModules.push(
-            "penghargaan"
+            tr(
+              "penghargaan",
+              "awards"
+            )
           );
 
           console.error(
@@ -404,9 +495,14 @@ export default function CompanyAboutPage() {
           failedModules.length > 0
         ) {
           setErrorMessage(
-            `Sebagian data backend gagal dimuat: ${failedModules.join(
-              ", "
-            )}.`
+            tr(
+              `Sebagian data backend gagal dimuat: ${failedModules.join(
+                ", "
+              )}.`,
+              `Some backend data could not be loaded: ${failedModules.join(
+                ", "
+              )}.`
+            )
           );
         }
       } catch (error) {
@@ -420,26 +516,37 @@ export default function CompanyAboutPage() {
         setAwards([]);
 
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Halaman About Us gagal dimuat."
+          tr(
+            "Halaman About Us gagal dimuat.",
+            "The About Us page could not be loaded."
+          )
         );
       } finally {
         setLoading(false);
       }
-    }, []);
+    }, [
+      language,
+      tr,
+    ]);
+
 
   useEffect(() => {
     loadCompanyData();
   }, [loadCompanyData]);
 
+
   const missionItems = useMemo(
     () =>
       normalizeMissionList(
-        profile?.mission
+        profile?.mission,
+        fallbackMission
       ),
-    [profile?.mission]
+    [
+      profile?.mission,
+      fallbackMission,
+    ]
   );
+
 
   const companyName =
     profile?.company_name ||
@@ -447,25 +554,64 @@ export default function CompanyAboutPage() {
 
   const companyDescription =
     profile?.short_description ||
-    fallbackDescription;
+    t(
+      "company.aboutPage.fallbackDescription",
+      "Jasa Medika Transmedic Group adalah grup perusahaan yang berfokus pada inovasi dan pengembangan solusi terintegrasi di bidang layanan kesehatan."
+    );
 
   const companyVision =
     profile?.vision ||
-    fallbackVision;
+    t(
+      "company.aboutPage.fallbackVision",
+      "Menjadi perusahaan terdepan dalam menyediakan dan mengembangkan solusi teknologi informasi yang tepat bagi fasilitas kesehatan di Indonesia."
+    );
+
+
+  function getCertificationCategoryLabel(
+    category
+  ) {
+    switch (category) {
+      case "Hak Cipta":
+        return t(
+          "company.aboutPage.copyright",
+          "Hak Cipta"
+        );
+
+      case "Sertifikat Lain":
+        return t(
+          "company.aboutPage.otherCertificate",
+          "Sertifikat Lain"
+        );
+
+      default:
+        return category;
+    }
+  }
+
 
   if (loading) {
     return <AboutPageLoading />;
   }
 
+
   return (
     <>
       <PageHero
-        eyebrow="Company — About Us"
-        title="Building an Integrated Healthcare Ecosystem"
-        description="Menghadirkan inovasi, teknologi, dan layanan terintegrasi untuk mendukung transformasi fasilitas kesehatan Indonesia."
+        eyebrow={t(
+          "company.aboutPage.heroEyebrow",
+          "Perusahaan — Tentang Kami"
+        )}
+        title={t(
+          "company.aboutPage.heroTitle",
+          "Membangun Ekosistem Kesehatan yang Terintegrasi"
+        )}
+        description={t(
+          "company.aboutPage.heroDescription",
+          "Menghadirkan inovasi, teknologi, dan layanan terintegrasi untuk mendukung transformasi fasilitas kesehatan Indonesia."
+        )}
       />
 
-      {/* Peringatan ketika Supabase gagal */}
+
       {errorMessage && (
         <section className="container-jmt pt-8">
           <div className="flex flex-col justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center">
@@ -477,14 +623,18 @@ export default function CompanyAboutPage() {
 
               <div>
                 <p className="font-semibold text-amber-800">
-                  Sebagian data backend belum
-                  dapat dimuat
+                  {t(
+                    "company.common.backendWarning",
+                    "Sebagian data backend belum dapat dimuat"
+                  )}
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  {errorMessage} Bagian lain
-                  pada halaman tetap dapat
-                  ditampilkan.
+                  {errorMessage}{" "}
+                  {t(
+                    "company.common.backendWarningDescription",
+                    "Bagian lain pada halaman tetap dapat ditampilkan."
+                  )}
                 </p>
               </div>
             </div>
@@ -495,35 +645,46 @@ export default function CompanyAboutPage() {
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
             >
               <RefreshCw size={16} />
-              Muat Ulang
+
+              {t(
+                "company.common.reload",
+                "Muat Ulang"
+              )}
             </button>
           </div>
         </section>
       )}
 
-      {/* Tentang JMT */}
+
       <section className="container-jmt grid gap-12 py-20 lg:grid-cols-2 lg:items-center">
         <div className="relative min-h-[480px] overflow-hidden rounded-[2rem] shadow-xl">
-  <img
-    src={gedungPerusahaan}
-    alt="Gedung perusahaan Jasa Medika Transmedic"
-    className="absolute inset-0 h-full w-full object-cover"
-  />
+          <img
+            src={gedungPerusahaan}
+            alt={tr(
+              "Gedung perusahaan Jasa Medika Transmedic",
+              "Jasa Medika Transmedic company building"
+            )}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
 
-  <div className="absolute inset-0 bg-gradient-to-t from-[#082B3A]/88 via-[#082B3A]/45 to-[#082B3A]/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#082B3A]/88 via-[#082B3A]/45 to-[#082B3A]/10" />
 
-  <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
 
-  <div className="relative flex h-full flex-col justify-end p-8 text-white md:p-12">
-    <span className="inline-flex w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
-      Jasa Medika Transmedic
-    </span>
-  </div>
-</div>
+          <div className="relative flex h-full flex-col justify-end p-8 text-white md:p-12">
+            <span className="inline-flex w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-sm">
+              Jasa Medika Transmedic
+            </span>
+          </div>
+        </div>
+
 
         <div>
           <SectionHeading
-            kicker="About Us"
+            kicker={t(
+              "company.aboutPage.sectionKicker",
+              "Tentang Kami"
+            )}
             title={companyName}
           />
 
@@ -532,27 +693,26 @@ export default function CompanyAboutPage() {
           </p>
 
           <p className="mt-5 text-base leading-8 text-slate-600">
-            Melalui berbagai unit usaha yang
-            saling terhubung, JMT Group
-            menyediakan layanan teknologi,
-            operasional kesehatan, pengelolaan
-            fasilitas, pelatihan industri, dan
-            manajemen rantai pasok.
+            {t(
+              "company.aboutPage.paragraphTwo",
+              "Melalui berbagai unit usaha yang saling terhubung, JMT Group menyediakan layanan teknologi, operasional kesehatan, pengelolaan fasilitas, pelatihan industri, dan manajemen rantai pasok."
+            )}
           </p>
 
           <p className="mt-5 text-base leading-8 text-slate-600">
-            Dengan semangat inovasi dan
-            kolaborasi, JMT Group berkomitmen
-            mendukung terbentuknya ekosistem
-            kesehatan yang modern,
-            berkelanjutan, dan memiliki daya
-            saing tinggi.
+            {t(
+              "company.aboutPage.paragraphThree",
+              "Dengan semangat inovasi dan kolaborasi, JMT Group berkomitmen mendukung terbentuknya ekosistem kesehatan yang modern, berkelanjutan, dan memiliki daya saing tinggi."
+            )}
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-wider text-orange">
-                Established
+                {t(
+                  "company.aboutPage.established",
+                  "Didirikan"
+                )}
               </p>
 
               <p className="mt-2 text-2xl font-bold text-ink">
@@ -562,24 +722,39 @@ export default function CompanyAboutPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-wider text-orange">
-                Focus
+                {t(
+                  "company.aboutPage.focus",
+                  "Fokus"
+                )}
               </p>
 
               <p className="mt-2 text-lg font-bold text-ink">
-                Integrated Healthcare
+                {t(
+                  "company.aboutPage.focusValue",
+                  "Layanan Kesehatan Terintegrasi"
+                )}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Bidang usaha */}
+
       <section className="bg-mist py-20">
         <div className="container-jmt">
           <SectionHeading
-            kicker="Business Ecosystem"
-            title="Layanan terintegrasi dalam satu ekosistem"
-            description="Unit usaha JMT Group saling melengkapi untuk membantu fasilitas kesehatan meningkatkan kualitas, efisiensi, dan keberlanjutan operasional."
+            kicker={t(
+              "company.aboutPage.businessKicker",
+              "Ekosistem Bisnis"
+            )}
+            title={t(
+              "company.aboutPage.businessTitle",
+              "Layanan terintegrasi dalam satu ekosistem"
+            )}
+            description={t(
+              "company.aboutPage.businessDescription",
+              "Unit usaha JMT Group saling melengkapi untuk membantu fasilitas kesehatan meningkatkan kualitas, efisiensi, dan keberlanjutan operasional."
+            )}
             center
           />
 
@@ -610,12 +785,21 @@ export default function CompanyAboutPage() {
         </div>
       </section>
 
-      {/* Statistik */}
+
       <section className="container-jmt py-20">
         <SectionHeading
-          kicker="Our Experience"
-          title="Pengalaman yang membangun kepercayaan"
-          description="Didukung pengalaman, tenaga profesional, dan kolaborasi dengan berbagai fasilitas kesehatan."
+          kicker={t(
+            "company.aboutPage.experienceKicker",
+            "Pengalaman Kami"
+          )}
+          title={t(
+            "company.aboutPage.experienceTitle",
+            "Pengalaman yang membangun kepercayaan"
+          )}
+          description={t(
+            "company.aboutPage.experienceDescription",
+            "Didukung pengalaman, tenaga profesional, dan kolaborasi dengan berbagai fasilitas kesehatan."
+          )}
           center
         />
 
@@ -654,7 +838,7 @@ export default function CompanyAboutPage() {
         </div>
       </section>
 
-      {/* Visi dan Misi */}
+
       <section className="bg-mist py-20">
         <div className="container-jmt grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-3xl bg-gradient-to-br from-ink to-teal p-8 text-white md:p-10">
@@ -663,11 +847,17 @@ export default function CompanyAboutPage() {
             </div>
 
             <p className="mt-8 text-xs font-bold uppercase tracking-[0.18em] text-orange">
-              Vision
+              {t(
+                "company.aboutPage.vision",
+                "Visi"
+              )}
             </p>
 
             <h2 className="mt-3 text-3xl font-bold">
-              Visi Perusahaan
+              {t(
+                "company.aboutPage.visionTitle",
+                "Visi Perusahaan"
+              )}
             </h2>
 
             <p className="mt-6 text-base leading-8 text-white/70">
@@ -675,17 +865,24 @@ export default function CompanyAboutPage() {
             </p>
           </article>
 
+
           <article className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm md:p-10">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/10 text-orange">
               <CheckCircle2 size={27} />
             </div>
 
             <p className="mt-8 text-xs font-bold uppercase tracking-[0.18em] text-orange">
-              Mission
+              {t(
+                "company.aboutPage.mission",
+                "Misi"
+              )}
             </p>
 
             <h2 className="mt-3 text-3xl font-bold text-ink">
-              Misi Perusahaan
+              {t(
+                "company.aboutPage.missionTitle",
+                "Misi Perusahaan"
+              )}
             </h2>
 
             <div className="mt-7 space-y-4">
@@ -710,13 +907,22 @@ export default function CompanyAboutPage() {
         </div>
       </section>
 
-      {/* Certifications & Accreditations */}
+
       {certifications.length > 0 && (
         <section className="container-jmt py-20">
           <SectionHeading
-            kicker="Certifications & Accreditations"
-            title="Standar, legalitas, dan keamanan yang terpercaya"
-            description="Sertifikasi, registrasi, dan pengakuan yang memperkuat komitmen JMT Group terhadap kualitas layanan, legalitas, dan keamanan sistem."
+            kicker={t(
+              "company.aboutPage.certificationsKicker",
+              "Sertifikasi & Akreditasi"
+            )}
+            title={t(
+              "company.aboutPage.certificationsTitle",
+              "Standar, legalitas, dan keamanan yang terpercaya"
+            )}
+            description={t(
+              "company.aboutPage.certificationsDescription",
+              "Sertifikasi, registrasi, dan pengakuan yang memperkuat komitmen JMT Group terhadap kualitas layanan, legalitas, dan keamanan sistem."
+            )}
             center
           />
 
@@ -748,9 +954,9 @@ export default function CompanyAboutPage() {
                         </div>
 
                         <p className="mt-4 text-sm font-semibold text-slate-400">
-                          {
+                          {getCertificationCategoryLabel(
                             certification.category
-                          }
+                          )}
                         </p>
                       </div>
                     )}
@@ -760,9 +966,9 @@ export default function CompanyAboutPage() {
                         certification.category
                       )}`}
                     >
-                      {
+                      {getCertificationCategoryLabel(
                         certification.category
-                      }
+                      )}
                     </span>
                   </div>
 
@@ -773,7 +979,10 @@ export default function CompanyAboutPage() {
                           size={16}
                         />
 
-                        Diterbitkan{" "}
+                        {t(
+                          "company.aboutPage.issued",
+                          "Diterbitkan"
+                        )}{" "}
                         {
                           certification.issued_year
                         }
@@ -808,7 +1017,10 @@ export default function CompanyAboutPage() {
                             size={17}
                           />
 
-                          Lihat Dokumen
+                          {t(
+                            "company.aboutPage.viewDocument",
+                            "Lihat Dokumen"
+                          )}
 
                           <ArrowUpRight
                             size={16}
@@ -824,14 +1036,23 @@ export default function CompanyAboutPage() {
         </section>
       )}
 
-      {/* Awards & Recognition */}
+
       {awards.length > 0 && (
         <section className="bg-mist py-20">
           <div className="container-jmt">
             <SectionHeading
-              kicker="Awards & Recognition"
-              title="Penghargaan atas inovasi dan kontribusi"
-              description="Pengakuan yang diterima perusahaan atas kontribusi, inovasi, kolaborasi, dan pengembangan solusi dalam ekosistem layanan kesehatan."
+              kicker={t(
+                "company.aboutPage.awardsKicker",
+                "Penghargaan & Pengakuan"
+              )}
+              title={t(
+                "company.aboutPage.awardsTitle",
+                "Penghargaan atas inovasi dan kontribusi"
+              )}
+              description={t(
+                "company.aboutPage.awardsDescription",
+                "Pengakuan yang diterima perusahaan atas kontribusi, inovasi, kolaborasi, dan pengembangan solusi dalam ekosistem layanan kesehatan."
+              )}
               center
             />
 
@@ -858,7 +1079,10 @@ export default function CompanyAboutPage() {
                         </div>
 
                         <p className="mt-4 text-sm font-semibold text-slate-400">
-                          Awards & Recognition
+                          {t(
+                            "company.aboutPage.awardsKicker",
+                            "Penghargaan & Pengakuan"
+                          )}
                         </p>
                       </div>
                     )}
@@ -903,85 +1127,91 @@ export default function CompanyAboutPage() {
         </section>
       )}
 
-      {/* Subsidiaries */}
-      {/* Subsidiaries */}
-<section className="bg-ink py-20 text-white">
-  <div className="container-jmt">
-    <div className="max-w-4xl">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">
-        Corporate Holding
-      </p>
 
-      <h2 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-        Jasamedika Transmedic Subsidiaries
-      </h2>
-
-      <p className="mt-5 max-w-3xl text-sm leading-7 text-white/65 md:text-base">
-        Perusahaan dalam ekosistem JMT Group memiliki keahlian yang saling
-        melengkapi dalam teknologi kesehatan, infrastruktur, fasilitas,
-        IoT, dan logistik.
-      </p>
-    </div>
-
-    <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {subsidiaryItems.map((item) => {
-        const Icon = item.icon;
-
-        const cardContent = (
-          <>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-white/10 p-3 text-orange">
-                <Icon size={24} />
-              </div>
-
-              {item.website && (
-                <ArrowUpRight
-                  size={18}
-                  className="text-white/30 transition group-hover:text-orange"
-                />
+      <section className="bg-ink py-20 text-white">
+        <div className="container-jmt">
+          <div className="max-w-4xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">
+              {t(
+                "company.aboutPage.holdingKicker",
+                "Holding Perusahaan"
               )}
-            </div>
-
-            <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-orange">
-              {item.category}
             </p>
 
-            <h3 className="mt-3 text-xl font-bold text-white">
-              {item.name}
-            </h3>
+            <h2 className="mt-4 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+              {t(
+                "company.aboutPage.holdingTitle",
+                "Anak Perusahaan Jasamedika Transmedic"
+              )}
+            </h2>
 
-            <p className="mt-4 text-sm leading-7 text-white/60">
-              {item.description}
+            <p className="mt-5 max-w-3xl text-sm leading-7 text-white/65 md:text-base">
+              {t(
+                "company.aboutPage.holdingDescription",
+                "Perusahaan dalam ekosistem JMT Group memiliki keahlian yang saling melengkapi dalam teknologi kesehatan, infrastruktur, fasilitas, IoT, dan logistik."
+              )}
             </p>
-          </>
-        );
+          </div>
 
-        if (item.website) {
-          return (
-            <a
-              key={item.name}
-              href={item.website}
-              target="_blank"
-              rel="noreferrer"
-              className="group rounded-3xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1 hover:border-orange/40 hover:bg-white/10"
-            >
-              {cardContent}
-            </a>
-          );
-        }
+          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {subsidiaryItems.map((item) => {
+              const Icon = item.icon;
 
-        return (
-          <article
-            key={item.name}
-            className="group rounded-3xl border border-white/10 bg-white/5 p-7"
-          >
-            {cardContent}
-          </article>
-        );
-      })}
-    </div>
-  </div>
-</section>
+              const cardContent = (
+                <>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-white/10 p-3 text-orange">
+                      <Icon size={24} />
+                    </div>
+
+                    {item.website && (
+                      <ArrowUpRight
+                        size={18}
+                        className="text-white/30 transition group-hover:text-orange"
+                      />
+                    )}
+                  </div>
+
+                  <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-orange">
+                    {item.category}
+                  </p>
+
+                  <h3 className="mt-3 text-xl font-bold text-white">
+                    {item.name}
+                  </h3>
+
+                  <p className="mt-4 text-sm leading-7 text-white/60">
+                    {item.description}
+                  </p>
+                </>
+              );
+
+              if (item.website) {
+                return (
+                  <a
+                    key={item.name}
+                    href={item.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group rounded-3xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1 hover:border-orange/40 hover:bg-white/10"
+                  >
+                    {cardContent}
+                  </a>
+                );
+              }
+
+              return (
+                <article
+                  key={item.name}
+                  className="group rounded-3xl border border-white/10 bg-white/5 p-7"
+                >
+                  {cardContent}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       <CTA />
     </>

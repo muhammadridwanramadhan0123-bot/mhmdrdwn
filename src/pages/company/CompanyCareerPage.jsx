@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -19,7 +20,10 @@ import {
   Search,
   UsersRound,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+
+import {
+  Link,
+} from "react-router-dom";
 
 import {
   CTA,
@@ -27,132 +31,215 @@ import {
   SectionHeading,
 } from "../../components/Common";
 
-import { getOpenCareers } from "../../services/companyService";
+import {
+  getOpenCareers,
+} from "../../services/companyService";
 
-function formatDate(value) {
+import {
+  useLanguage,
+} from "../../contexts/LanguageContext";
+
+
+function formatDate(
+  value,
+  language,
+  fallback
+) {
   if (!value) {
-    return "Tidak ditentukan";
+    return fallback;
   }
 
-  const date = new Date(
-    `${value}T00:00:00`
-  );
+  const date =
+    new Date(
+      `${value}T00:00:00`
+    );
 
-  if (Number.isNaN(date.getTime())) {
-    return "Tidak ditentukan";
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return fallback;
   }
 
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat(
+    language === "en"
+      ? "en-US"
+      : "id-ID",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(date);
 }
 
-function getEmploymentTypeLabel(value) {
-  const normalizedValue = String(
-    value || ""
-  )
-    .trim()
-    .toLowerCase();
+
+function getEmploymentTypeLabel(
+  value,
+  t
+) {
+  const normalizedValue =
+    String(value || "")
+      .trim()
+      .toLowerCase();
 
   switch (normalizedValue) {
     case "full-time":
     case "full_time":
     case "fulltime":
-      return "Full Time";
+      return t(
+        "company.careerPage.fullTime",
+        "Penuh Waktu"
+      );
 
     case "part-time":
     case "part_time":
     case "parttime":
-      return "Part Time";
+      return t(
+        "company.careerPage.partTime",
+        "Paruh Waktu"
+      );
 
     case "contract":
-      return "Contract";
+      return t(
+        "company.careerPage.contract",
+        "Kontrak"
+      );
 
     case "internship":
     case "intern":
-      return "Internship";
+      return t(
+        "company.careerPage.internship",
+        "Magang"
+      );
 
     case "freelance":
-      return "Freelance";
-
-    case "temporary":
-      return "Temporary";
+      return t(
+        "company.careerPage.freelance",
+        "Freelance"
+      );
 
     default:
-      return value || "Tidak ditentukan";
+      return value || "-";
   }
 }
 
-function getDaysUntilClosing(value) {
+
+function getDaysUntilClosing(
+  value
+) {
   if (!value) {
     return null;
   }
 
-  const closingDate = new Date(
-    `${value}T23:59:59`
-  );
+  const closingDate =
+    new Date(
+      `${value}T23:59:59`
+    );
 
   if (
-    Number.isNaN(closingDate.getTime())
+    Number.isNaN(
+      closingDate.getTime()
+    )
   ) {
     return null;
   }
 
-  const currentDate = new Date();
+  const currentDate =
+    new Date();
 
   const difference =
     closingDate.getTime() -
     currentDate.getTime();
 
   return Math.ceil(
-    difference / (1000 * 60 * 60 * 24)
+    difference /
+      (1000 *
+        60 *
+        60 *
+        24)
   );
 }
 
-function getClosingInformation(value) {
-  const daysRemaining =
-    getDaysUntilClosing(value);
 
-  if (daysRemaining === null) {
+function getClosingInformation(
+  value,
+  language
+) {
+  const en =
+    language === "en";
+
+  const daysRemaining =
+    getDaysUntilClosing(
+      value
+    );
+
+  if (
+    daysRemaining === null
+  ) {
     return {
-      label: "Tanpa batas waktu",
+      label: en
+        ? "No deadline"
+        : "Tanpa batas waktu",
+
       className:
         "border-slate-200 bg-slate-100 text-slate-600",
     };
   }
 
-  if (daysRemaining < 0) {
+  if (
+    daysRemaining < 0
+  ) {
     return {
-      label: "Pendaftaran ditutup",
+      label: en
+        ? "Applications closed"
+        : "Pendaftaran ditutup",
+
       className:
         "border-red-200 bg-red-50 text-red-700",
     };
   }
 
-  if (daysRemaining === 0) {
+  if (
+    daysRemaining === 0
+  ) {
     return {
-      label: "Berakhir hari ini",
+      label: en
+        ? "Ends today"
+        : "Berakhir hari ini",
+
       className:
         "border-red-200 bg-red-50 text-red-700",
     };
   }
 
-  if (daysRemaining <= 7) {
+  const label =
+    en
+      ? `${daysRemaining} ${
+          daysRemaining === 1
+            ? "day"
+            : "days"
+        } remaining`
+      : `${daysRemaining} hari lagi`;
+
+  if (
+    daysRemaining <= 7
+  ) {
     return {
-      label: `${daysRemaining} hari lagi`,
+      label,
       className:
         "border-orange-200 bg-orange-50 text-[#FF5A0A]",
     };
   }
 
   return {
-    label: `${daysRemaining} hari lagi`,
+    label,
     className:
       "border-emerald-200 bg-emerald-50 text-emerald-700",
   };
 }
+
 
 function normalizeRequirements(value) {
   if (!value) {
@@ -162,37 +249,52 @@ function normalizeRequirements(value) {
   if (Array.isArray(value)) {
     return value
       .map((item) =>
-        String(item || "").trim()
+        String(item || "")
+          .trim()
       )
       .filter(Boolean);
   }
 
-  if (typeof value === "string") {
-    const text = value.trim();
+  if (
+    typeof value ===
+    "string"
+  ) {
+    const text =
+      value.trim();
 
     if (!text) {
       return [];
     }
 
     try {
-      const parsedValue = JSON.parse(text);
+      const parsedValue =
+        JSON.parse(text);
 
-      if (Array.isArray(parsedValue)) {
+      if (
+        Array.isArray(
+          parsedValue
+        )
+      ) {
         return parsedValue
           .map((item) =>
-            String(item || "").trim()
+            String(
+              item || ""
+            ).trim()
           )
           .filter(Boolean);
       }
     } catch {
-      // Gunakan pemisahan teks biasa.
+      // Gunakan teks biasa.
     }
 
     return text
       .split(/\r?\n|;/)
       .map((item) =>
         item
-          .replace(/^[-•]\s*/, "")
+          .replace(
+            /^[-•]\s*/,
+            ""
+          )
           .trim()
       )
       .filter(Boolean);
@@ -200,6 +302,7 @@ function normalizeRequirements(value) {
 
   return [];
 }
+
 
 function CareerPageLoading() {
   return (
@@ -210,9 +313,7 @@ function CareerPageLoading() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
           <div>
             <div className="h-5 w-32 animate-pulse rounded bg-slate-200" />
-
             <div className="mt-5 h-12 w-3/4 animate-pulse rounded bg-slate-200" />
-
             <div className="mt-6 h-5 w-full animate-pulse rounded bg-slate-100" />
           </div>
 
@@ -220,23 +321,44 @@ function CareerPageLoading() {
         </div>
 
         <div className="mt-14 space-y-5">
-          {[1, 2, 3].map((item) => (
-            <div
-              key={item}
-              className="h-64 animate-pulse rounded-3xl border border-slate-200 bg-white"
-            />
-          ))}
+          {[1, 2, 3].map(
+            (item) => (
+              <div
+                key={item}
+                className="h-64 animate-pulse rounded-3xl border border-slate-200 bg-white"
+              />
+            )
+          )}
         </div>
       </section>
     </>
   );
 }
 
-export default function CompanyCareerPage() {
-  const [careers, setCareers] = useState([]);
 
-  const [searchTerm, setSearchTerm] =
-    useState("");
+export default function CompanyCareerPage() {
+  const {
+    language,
+    t,
+  } = useLanguage();
+
+  const tr = useCallback(
+    (idText, enText) =>
+      language === "en"
+        ? enText
+        : idText,
+    [language]
+  );
+
+  const [
+    careers,
+    setCareers,
+  ] = useState([]);
+
+  const [
+    searchTerm,
+    setSearchTerm,
+  ] = useState("");
 
   const [
     selectedDepartment,
@@ -261,56 +383,76 @@ export default function CompanyCareerPage() {
     setErrorMessage,
   ] = useState("");
 
-  const loadCareers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
 
-      const data = await getOpenCareers();
+  const loadCareers =
+    useCallback(async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
 
-      setCareers(
-        Array.isArray(data) ? data : []
-      );
-    } catch (error) {
-      console.error(
-        "Lowongan pekerjaan gagal dimuat:",
-        error
-      );
+        const data =
+          await getOpenCareers(
+            language
+          );
 
-      setCareers([]);
+        setCareers(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Lowongan pekerjaan gagal dimuat:",
+          error
+        );
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Lowongan pekerjaan gagal dimuat."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setCareers([]);
+        setErrorMessage(
+          "LOAD_ERROR"
+        );
+      } finally {
+        setLoading(false);
+      }
+    }, [
+      language,
+    ]);
+
 
   useEffect(() => {
     loadCareers();
   }, [loadCareers]);
 
-  const departmentOptions = useMemo(() => {
-    return [
-      ...new Set(
-        careers
-          .map((career) =>
-            String(
-              career.department || ""
-            ).trim()
+
+  const departmentOptions =
+    useMemo(() => {
+      return [
+        ...new Set(
+          careers
+            .map((career) =>
+              String(
+                career.department ||
+                  ""
+              ).trim()
+            )
+            .filter(Boolean)
+        ),
+      ].sort(
+        (
+          firstItem,
+          secondItem
+        ) =>
+          firstItem.localeCompare(
+            secondItem,
+            language === "en"
+              ? "en"
+              : "id"
           )
-          .filter(Boolean)
-      ),
-    ].sort((firstItem, secondItem) =>
-      firstItem.localeCompare(
-        secondItem,
-        "id"
-      )
-    );
-  }, [careers]);
+      );
+    }, [
+      careers,
+      language,
+    ]);
+
 
   const employmentTypeOptions =
     useMemo(() => {
@@ -325,115 +467,190 @@ export default function CompanyCareerPage() {
             )
             .filter(Boolean)
         ),
-      ].sort((firstItem, secondItem) =>
-        firstItem.localeCompare(
-          secondItem,
-          "id"
-        )
-      );
+      ].sort();
     }, [careers]);
 
-  const careerSummary = useMemo(() => {
-    const locations = new Set(
-      careers
-        .map((career) =>
-          String(
-            career.location || ""
-          ).trim()
-        )
-        .filter(Boolean)
-    );
 
-    const departments = new Set(
-      careers
-        .map((career) =>
-          String(
-            career.department || ""
-          ).trim()
-        )
-        .filter(Boolean)
-    );
+  const careerSummary =
+    useMemo(() => {
+      const locations =
+        new Set(
+          careers
+            .map((career) =>
+              String(
+                career.location ||
+                  ""
+              ).trim()
+            )
+            .filter(Boolean)
+        );
 
-    const closingSoon = careers.filter(
-      (career) => {
-        const daysRemaining =
-          getDaysUntilClosing(
-            career.closing_date
+      const departments =
+        new Set(
+          careers
+            .map((career) =>
+              String(
+                career.department ||
+                  ""
+              ).trim()
+            )
+            .filter(Boolean)
+        );
+
+      const closingSoon =
+        careers.filter(
+          (career) => {
+            const daysRemaining =
+              getDaysUntilClosing(
+                career.closing_date
+              );
+
+            return (
+              daysRemaining !==
+                null &&
+              daysRemaining >= 0 &&
+              daysRemaining <= 7
+            );
+          }
+        ).length;
+
+      return {
+        total:
+          careers.length,
+
+        departments:
+          departments.size,
+
+        locations:
+          locations.size,
+
+        closingSoon,
+      };
+    }, [careers]);
+
+
+  const filteredCareers =
+    useMemo(() => {
+      const normalizedSearch =
+        searchTerm
+          .trim()
+          .toLowerCase();
+
+      return careers.filter(
+        (career) => {
+          const searchableText =
+            [
+              career.position,
+              career.department,
+              career.location,
+              career.employment_type,
+              career.description,
+              ...(Array.isArray(
+                career.requirements
+              )
+                ? career.requirements
+                : []),
+            ]
+              .map((value) =>
+                String(
+                  value || ""
+                ).toLowerCase()
+              )
+              .join(" ");
+
+          const matchesSearch =
+            !normalizedSearch ||
+            searchableText.includes(
+              normalizedSearch
+            );
+
+          const matchesDepartment =
+            selectedDepartment ===
+              "all" ||
+            career.department ===
+              selectedDepartment;
+
+          const matchesEmploymentType =
+            selectedEmploymentType ===
+              "all" ||
+            career.employment_type ===
+              selectedEmploymentType;
+
+          return (
+            matchesSearch &&
+            matchesDepartment &&
+            matchesEmploymentType
           );
-
-        return (
-          daysRemaining !== null &&
-          daysRemaining >= 0 &&
-          daysRemaining <= 7
-        );
-      }
-    ).length;
-
-    return {
-      total: careers.length,
-      departments: departments.size,
-      locations: locations.size,
-      closingSoon,
-    };
-  }, [careers]);
-
-  const filteredCareers = useMemo(() => {
-    const normalizedSearch = searchTerm
-      .trim()
-      .toLowerCase();
-
-    return careers.filter((career) => {
-      const searchableText = [
-        career.position,
-        career.department,
-        career.location,
-        career.employment_type,
-        career.description,
-        ...(Array.isArray(
-          career.requirements
-        )
-          ? career.requirements
-          : []),
-      ]
-        .map((value) =>
-          String(value || "").toLowerCase()
-        )
-        .join(" ");
-
-      const matchesSearch =
-        !normalizedSearch ||
-        searchableText.includes(
-          normalizedSearch
-        );
-
-      const matchesDepartment =
-        selectedDepartment === "all" ||
-        career.department ===
-          selectedDepartment;
-
-      const matchesEmploymentType =
-        selectedEmploymentType === "all" ||
-        career.employment_type ===
-          selectedEmploymentType;
-
-      return (
-        matchesSearch &&
-        matchesDepartment &&
-        matchesEmploymentType
+        }
       );
-    });
-  }, [
-    careers,
-    searchTerm,
-    selectedDepartment,
-    selectedEmploymentType,
-  ]);
+    }, [
+      careers,
+      searchTerm,
+      selectedDepartment,
+      selectedEmploymentType,
+    ]);
+
+
+  const lifeItems =
+    useMemo(
+      () => [
+        {
+          title: tr(
+            "Pembelajaran Berkelanjutan",
+            "Continuous Learning"
+          ),
+
+          description: tr(
+            "Kesempatan mengembangkan pengetahuan dan keterampilan melalui pengalaman proyek serta pembelajaran berkelanjutan.",
+            "Opportunities to develop knowledge and skills through project experience and continuous learning."
+          ),
+
+          icon:
+            CheckCircle2,
+        },
+        {
+          title: tr(
+            "Tim Kolaboratif",
+            "Collaborative Team"
+          ),
+
+          description: tr(
+            "Bekerja bersama tim lintas disiplin untuk menyelesaikan tantangan dan menciptakan solusi yang berdampak.",
+            "Work with multidisciplinary teams to solve challenges and create impactful solutions."
+          ),
+
+          icon:
+            UsersRound,
+        },
+        {
+          title: tr(
+            "Dampak Bermakna",
+            "Meaningful Impact"
+          ),
+
+          description: tr(
+            "Berkontribusi dalam pengembangan teknologi dan layanan yang mendukung kemajuan fasilitas kesehatan.",
+            "Contribute to technology and services that support the advancement of healthcare facilities."
+          ),
+
+          icon:
+            BriefcaseBusiness,
+        },
+      ],
+      [tr]
+    );
+
 
   function resetFilters() {
     setSearchTerm("");
-    setSelectedDepartment("all");
-    setSelectedEmploymentType("all");
+    setSelectedDepartment(
+      "all"
+    );
+    setSelectedEmploymentType(
+      "all"
+    );
   }
+
 
   function toggleCareerDetail(id) {
     setExpandedCareerId(
@@ -444,19 +661,30 @@ export default function CompanyCareerPage() {
     );
   }
 
+
   if (loading) {
     return <CareerPageLoading />;
   }
 
+
   return (
     <>
       <PageHero
-        eyebrow="Company — Career"
-        title="Build Your Career With JMT Group"
-        description="Bergabung bersama tim yang mengembangkan teknologi, layanan, dan ekosistem kesehatan terintegrasi di Indonesia."
+        eyebrow={t(
+          "company.careerPage.heroEyebrow",
+          "Perusahaan — Karier"
+        )}
+        title={t(
+          "company.careerPage.heroTitle",
+          "Berkembang dan Berinovasi Bersama Kami"
+        )}
+        description={t(
+          "company.careerPage.heroDescription",
+          "Temukan kesempatan untuk bertumbuh dan berkontribusi dalam pengembangan teknologi serta layanan kesehatan."
+        )}
       />
 
-      {/* Peringatan error */}
+
       {errorMessage && (
         <section className="container-jmt pt-8">
           <div className="flex flex-col justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center">
@@ -468,50 +696,75 @@ export default function CompanyCareerPage() {
 
               <div>
                 <p className="font-semibold text-amber-800">
-                  Data lowongan belum dapat dimuat
+                  {tr(
+                    "Data lowongan belum dapat dimuat",
+                    "Career data could not be loaded"
+                  )}
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-amber-700">
-                  {errorMessage}
+                  {tr(
+                    "Terjadi kendala saat mengambil data lowongan pekerjaan.",
+                    "There was a problem while loading current job openings."
+                  )}
                 </p>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={loadCareers}
+              onClick={
+                loadCareers
+              }
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
             >
-              <RefreshCw size={16} />
-              Muat Ulang
+              <RefreshCw
+                size={16}
+              />
+
+              {t(
+                "company.common.reload",
+                "Muat Ulang"
+              )}
             </button>
           </div>
         </section>
       )}
 
-      {/* Pendahuluan */}
+
       <section className="container-jmt py-20">
         <div className="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)] lg:items-center">
           <div>
             <SectionHeading
-              kicker="Join Our Team"
-              title="Tumbuh dan menciptakan dampak bersama JMT"
-              description="Kami mencari talenta yang memiliki semangat belajar, berkolaborasi, dan menghadirkan solusi yang memberikan dampak nyata bagi layanan kesehatan."
+              kicker={tr(
+                "Bergabung dengan Tim Kami",
+                "Join Our Team"
+              )}
+              title={tr(
+                "Tumbuh dan menciptakan dampak bersama JMT",
+                "Grow and create meaningful impact with JMT"
+              )}
+              description={tr(
+                "Kami mencari talenta yang memiliki semangat belajar, berkolaborasi, dan menghadirkan solusi yang memberikan dampak nyata bagi layanan kesehatan.",
+                "We are looking for people who are eager to learn, collaborate, and deliver solutions that create real impact in healthcare."
+              )}
             />
 
             <p className="mt-7 max-w-3xl text-base leading-8 text-slate-600">
-              JMT Group menghadirkan lingkungan
-              kerja yang mendukung pengembangan
-              kompetensi, inovasi, dan kolaborasi
-              lintas bidang.
+              {tr(
+                "JMT Group menghadirkan lingkungan kerja yang mendukung pengembangan kompetensi, inovasi, dan kolaborasi lintas bidang.",
+                "JMT Group provides a work environment that supports professional development, innovation, and cross-functional collaboration."
+              )}
             </p>
 
             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-600">
-              Temukan posisi yang sesuai dengan
-              pengalaman dan minat Anda melalui
-              daftar lowongan yang sedang dibuka.
+              {tr(
+                "Temukan posisi yang sesuai dengan pengalaman dan minat Anda melalui daftar lowongan yang sedang dibuka.",
+                "Explore current openings and find a position that matches your experience and interests."
+              )}
             </p>
           </div>
+
 
           <div className="grid grid-cols-2 gap-4">
             <article className="rounded-3xl bg-[#082B3A] p-6 text-white">
@@ -521,13 +774,19 @@ export default function CompanyCareerPage() {
               />
 
               <p className="mt-8 text-4xl font-bold">
-                {careerSummary.total}
+                {
+                  careerSummary.total
+                }
               </p>
 
               <p className="mt-2 text-sm text-white/60">
-                Posisi dibuka
+                {tr(
+                  "Posisi dibuka",
+                  "Open positions"
+                )}
               </p>
             </article>
+
 
             <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <Building2
@@ -536,13 +795,19 @@ export default function CompanyCareerPage() {
               />
 
               <p className="mt-8 text-4xl font-bold text-ink">
-                {careerSummary.departments}
+                {
+                  careerSummary.departments
+                }
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
-                Departemen
+                {t(
+                  "company.careerPage.department",
+                  "Departemen"
+                )}
               </p>
             </article>
+
 
             <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <MapPin
@@ -551,63 +816,96 @@ export default function CompanyCareerPage() {
               />
 
               <p className="mt-8 text-4xl font-bold text-ink">
-                {careerSummary.locations}
+                {
+                  careerSummary.locations
+                }
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
-                Lokasi kerja
+                {tr(
+                  "Lokasi kerja",
+                  "Work locations"
+                )}
               </p>
             </article>
 
+
             <article className="rounded-3xl bg-gradient-to-br from-orange to-[#FF7A35] p-6 text-white">
-              <Clock3 size={25} />
+              <Clock3
+                size={25}
+              />
 
               <p className="mt-8 text-4xl font-bold">
-                {careerSummary.closingSoon}
+                {
+                  careerSummary.closingSoon
+                }
               </p>
 
               <p className="mt-2 text-sm text-white/80">
-                Segera ditutup
+                {tr(
+                  "Segera ditutup",
+                  "Closing soon"
+                )}
               </p>
             </article>
           </div>
         </div>
       </section>
 
-      {/* Daftar lowongan */}
+
       <section className="bg-mist py-20">
         <div className="container-jmt">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">
-                Available Positions
+                {tr(
+                  "Posisi Tersedia",
+                  "Available Positions"
+                )}
               </p>
 
               <h2 className="mt-3 text-3xl font-bold text-ink md:text-4xl">
-                Lowongan Tersedia
+                {t(
+                  "company.careerPage.openPositions",
+                  "Posisi Terbuka"
+                )}
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-500">
-                Gunakan pencarian dan dropdown
-                filter untuk menemukan posisi yang
-                sesuai.
+                {tr(
+                  "Gunakan pencarian dan dropdown filter untuk menemukan posisi yang sesuai.",
+                  "Use search and filters to find a suitable position."
+                )}
               </p>
             </div>
 
             <p className="text-sm text-slate-500">
-              Menampilkan{" "}
+              {tr(
+                "Menampilkan",
+                "Showing"
+              )}{" "}
               <span className="font-bold text-ink">
-                {filteredCareers.length}
+                {
+                  filteredCareers.length
+                }
               </span>{" "}
-              dari{" "}
+              {tr(
+                "dari",
+                "of"
+              )}{" "}
               <span className="font-bold text-ink">
-                {careers.length}
+                {
+                  careers.length
+                }
               </span>{" "}
-              posisi
+              {tr(
+                "posisi",
+                "positions"
+              )}
             </p>
           </div>
 
-          {/* Pencarian dan dropdown */}
+
           {careers.length > 0 && (
             <div className="mt-10 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[minmax(0,1fr)_240px_240px_auto]">
               <div className="relative">
@@ -620,7 +918,10 @@ export default function CompanyCareerPage() {
                   htmlFor="career-search"
                   className="sr-only"
                 >
-                  Cari lowongan
+                  {tr(
+                    "Cari lowongan",
+                    "Search jobs"
+                  )}
                 </label>
 
                 <input
@@ -632,10 +933,14 @@ export default function CompanyCareerPage() {
                       event.target.value
                     )
                   }
-                  placeholder="Cari posisi, departemen, atau lokasi..."
+                  placeholder={tr(
+                    "Cari posisi, departemen, atau lokasi...",
+                    "Search position, department, or location..."
+                  )}
                   className="w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm text-ink outline-none transition placeholder:text-slate-400 focus:border-orange focus:ring-2 focus:ring-orange/10"
                 />
               </div>
+
 
               <div className="relative">
                 <Filter
@@ -647,12 +952,17 @@ export default function CompanyCareerPage() {
                   htmlFor="career-department"
                   className="sr-only"
                 >
-                  Filter departemen
+                  {tr(
+                    "Filter departemen",
+                    "Department filter"
+                  )}
                 </label>
 
                 <select
                   id="career-department"
-                  value={selectedDepartment}
+                  value={
+                    selectedDepartment
+                  }
                   onChange={(event) =>
                     setSelectedDepartment(
                       event.target.value
@@ -661,16 +971,25 @@ export default function CompanyCareerPage() {
                   className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-semibold text-ink outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/10"
                 >
                   <option value="all">
-                    Semua Departemen
+                    {tr(
+                      "Semua Departemen",
+                      "All Departments"
+                    )}
                   </option>
 
                   {departmentOptions.map(
                     (department) => (
                       <option
-                        key={department}
-                        value={department}
+                        key={
+                          department
+                        }
+                        value={
+                          department
+                        }
                       >
-                        {department}
+                        {
+                          department
+                        }
                       </option>
                     )
                   )}
@@ -682,6 +1001,7 @@ export default function CompanyCareerPage() {
                 />
               </div>
 
+
               <div className="relative">
                 <BriefcaseBusiness
                   size={16}
@@ -692,7 +1012,10 @@ export default function CompanyCareerPage() {
                   htmlFor="career-employment-type"
                   className="sr-only"
                 >
-                  Filter jenis pekerjaan
+                  {tr(
+                    "Filter jenis pekerjaan",
+                    "Employment type filter"
+                  )}
                 </label>
 
                 <select
@@ -708,17 +1031,27 @@ export default function CompanyCareerPage() {
                   className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm font-semibold text-ink outline-none transition focus:border-orange focus:ring-2 focus:ring-orange/10"
                 >
                   <option value="all">
-                    Semua Jenis Pekerjaan
+                    {tr(
+                      "Semua Jenis Pekerjaan",
+                      "All Employment Types"
+                    )}
                   </option>
 
                   {employmentTypeOptions.map(
-                    (employmentType) => (
+                    (
+                      employmentType
+                    ) => (
                       <option
-                        key={employmentType}
-                        value={employmentType}
+                        key={
+                          employmentType
+                        }
+                        value={
+                          employmentType
+                        }
                       >
                         {getEmploymentTypeLabel(
-                          employmentType
+                          employmentType,
+                          t
                         )}
                       </option>
                     )
@@ -731,6 +1064,7 @@ export default function CompanyCareerPage() {
                 />
               </div>
 
+
               <button
                 type="button"
                 onClick={resetFilters}
@@ -741,8 +1075,9 @@ export default function CompanyCareerPage() {
             </div>
           )}
 
-          {/* Kondisi belum ada lowongan */}
-          {careers.length === 0 ? (
+
+          {careers.length ===
+          0 ? (
             <div className="mt-12 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
               <div className="grid gap-8 p-8 md:p-12 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
                 <div>
@@ -753,27 +1088,38 @@ export default function CompanyCareerPage() {
                   </div>
 
                   <p className="mt-8 text-xs font-bold uppercase tracking-[0.18em] text-orange">
-                    Career Opportunity
+                    {tr(
+                      "Peluang Karier",
+                      "Career Opportunity"
+                    )}
                   </p>
 
                   <h3 className="mt-4 text-3xl font-bold text-ink">
-                    Saat ini belum ada lowongan
-                    yang tersedia
+                    {t(
+                      "company.careerPage.emptyTitle",
+                      "Belum ada lowongan terbuka"
+                    )}
                   </h3>
 
                   <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600">
-                    Terima kasih atas minat Anda
-                    untuk bergabung bersama JMT
-                    Group. Informasi lowongan terbaru
-                    akan ditampilkan pada halaman ini.
+                    {t(
+                      "company.careerPage.emptyDescription",
+                      "Saat ini belum terdapat posisi yang sedang dibuka. Silakan kembali lagi untuk melihat peluang terbaru."
+                    )}
                   </p>
 
                   <Link
                     to="/contact"
                     className="mt-8 inline-flex items-center gap-2 rounded-xl bg-orange px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-orange/20 transition hover:bg-[#E94F00]"
                   >
-                    Hubungi Kami
-                    <ArrowRight size={17} />
+                    {tr(
+                      "Hubungi Kami",
+                      "Contact Us"
+                    )}
+
+                    <ArrowRight
+                      size={17}
+                    />
                   </Link>
                 </div>
 
@@ -789,7 +1135,8 @@ export default function CompanyCareerPage() {
                 </div>
               </div>
             </div>
-          ) : filteredCareers.length === 0 ? (
+          ) : filteredCareers.length ===
+            0 ? (
             <div className="mt-10 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center shadow-sm">
               <Search
                 size={40}
@@ -797,12 +1144,17 @@ export default function CompanyCareerPage() {
               />
 
               <h3 className="mt-5 text-xl font-bold text-ink">
-                Lowongan tidak ditemukan
+                {tr(
+                  "Lowongan tidak ditemukan",
+                  "No matching jobs found"
+                )}
               </h3>
 
               <p className="mt-2 text-sm text-slate-500">
-                Tidak ada posisi yang sesuai dengan
-                pencarian atau filter yang dipilih.
+                {tr(
+                  "Tidak ada posisi yang sesuai dengan pencarian atau filter yang dipilih.",
+                  "No positions match your search or selected filters."
+                )}
               </p>
 
               <button
@@ -810,7 +1162,10 @@ export default function CompanyCareerPage() {
                 onClick={resetFilters}
                 className="mt-6 rounded-xl bg-orange px-5 py-3 text-sm font-semibold text-white"
               >
-                Tampilkan Semua
+                {tr(
+                  "Tampilkan Semua",
+                  "Show All"
+                )}
               </button>
             </div>
           ) : (
@@ -828,12 +1183,15 @@ export default function CompanyCareerPage() {
 
                   const closingInformation =
                     getClosingInformation(
-                      career.closing_date
+                      career.closing_date,
+                      language
                     );
 
                   return (
                     <article
-                      key={career.id}
+                      key={
+                        career.id
+                      }
                       className={`overflow-hidden rounded-3xl border bg-white shadow-sm transition duration-300 ${
                         isExpanded
                           ? "border-orange/40 shadow-xl"
@@ -863,12 +1221,16 @@ export default function CompanyCareerPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">
                                 {career.department ||
-                                  "General"}
+                                  tr(
+                                    "Umum",
+                                    "General"
+                                  )}
                               </span>
 
                               <span className="rounded-full bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
                                 {getEmploymentTypeLabel(
-                                  career.employment_type
+                                  career.employment_type,
+                                  t
                                 )}
                               </span>
 
@@ -882,14 +1244,22 @@ export default function CompanyCareerPage() {
                             </div>
 
                             <h3 className="mt-4 text-xl font-bold leading-8 text-ink md:text-2xl">
-                              {career.position}
+                              {
+                                career.position
+                              }
                             </h3>
 
                             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-500">
                               <span className="inline-flex items-center gap-2">
-                                <MapPin size={16} />
+                                <MapPin
+                                  size={16}
+                                />
+
                                 {career.location ||
-                                  "Lokasi tidak ditentukan"}
+                                  tr(
+                                    "Lokasi tidak ditentukan",
+                                    "Location not specified"
+                                  )}
                               </span>
 
                               <span className="inline-flex items-center gap-2">
@@ -897,9 +1267,17 @@ export default function CompanyCareerPage() {
                                   size={16}
                                 />
 
-                                Ditutup{" "}
+                                {tr(
+                                  "Ditutup",
+                                  "Closes"
+                                )}{" "}
                                 {formatDate(
-                                  career.closing_date
+                                  career.closing_date,
+                                  language,
+                                  tr(
+                                    "Tidak ditentukan",
+                                    "Not specified"
+                                  )
                                 )}
                               </span>
                             </div>
@@ -909,8 +1287,14 @@ export default function CompanyCareerPage() {
                         <div className="flex items-center justify-between gap-4 lg:justify-end">
                           <span className="text-sm font-semibold text-orange">
                             {isExpanded
-                              ? "Tutup Detail"
-                              : "Lihat Detail"}
+                              ? tr(
+                                  "Tutup Detail",
+                                  "Hide Details"
+                                )
+                              : tr(
+                                  "Lihat Detail",
+                                  "View Details"
+                                )}
                           </span>
 
                           <div
@@ -927,31 +1311,48 @@ export default function CompanyCareerPage() {
                         </div>
                       </button>
 
+
                       {isExpanded && (
                         <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-7 md:px-8 md:py-8">
                           <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
                             <div>
                               <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">
-                                Job Description
+                                {tr(
+                                  "Deskripsi Pekerjaan",
+                                  "Job Description"
+                                )}
                               </p>
 
                               <h4 className="mt-3 text-xl font-bold text-ink">
-                                Deskripsi Pekerjaan
+                                {tr(
+                                  "Deskripsi Pekerjaan",
+                                  "Job Description"
+                                )}
                               </h4>
 
                               <p className="mt-5 whitespace-pre-line text-sm leading-8 text-slate-600">
                                 {career.description ||
-                                  "Deskripsi pekerjaan belum tersedia."}
+                                  tr(
+                                    "Deskripsi pekerjaan belum tersedia.",
+                                    "The job description is not available yet."
+                                  )}
                               </p>
                             </div>
 
+
                             <div className="rounded-3xl border border-slate-200 bg-white p-6">
                               <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">
-                                Requirements
+                                {t(
+                                  "company.careerPage.requirements",
+                                  "Persyaratan"
+                                )}
                               </p>
 
                               <h4 className="mt-3 text-xl font-bold text-ink">
-                                Persyaratan
+                                {t(
+                                  "company.careerPage.requirements",
+                                  "Persyaratan"
+                                )}
                               </h4>
 
                               {requirements.length >
@@ -982,8 +1383,10 @@ export default function CompanyCareerPage() {
                                 </div>
                               ) : (
                                 <p className="mt-5 text-sm leading-7 text-slate-500">
-                                  Persyaratan belum
-                                  tersedia.
+                                  {tr(
+                                    "Persyaratan belum tersedia.",
+                                    "Requirements are not available yet."
+                                  )}
                                 </p>
                               )}
 
@@ -992,7 +1395,11 @@ export default function CompanyCareerPage() {
                                   to="/contact"
                                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-orange/20 transition hover:bg-[#E94F00]"
                                 >
-                                  Hubungi Tim Rekrutmen
+                                  {tr(
+                                    "Hubungi Tim Rekrutmen",
+                                    "Contact Recruitment Team"
+                                  )}
+
                                   <ArrowRight
                                     size={17}
                                   />
@@ -1011,57 +1418,56 @@ export default function CompanyCareerPage() {
         </div>
       </section>
 
-      {/* Budaya kerja */}
+
       <section className="container-jmt py-20">
         <SectionHeading
-          kicker="Life at JMT"
-          title="Lingkungan untuk belajar, tumbuh, dan berkolaborasi"
-          description="Kami percaya bahwa solusi terbaik lahir dari tim yang saling mendukung, terus belajar, dan berani menghadirkan inovasi."
+          kicker={tr(
+            "Kehidupan di JMT",
+            "Life at JMT"
+          )}
+          title={tr(
+            "Lingkungan untuk belajar, tumbuh, dan berkolaborasi",
+            "An environment to learn, grow, and collaborate"
+          )}
+          description={tr(
+            "Kami percaya bahwa solusi terbaik lahir dari tim yang saling mendukung, terus belajar, dan berani menghadirkan inovasi.",
+            "We believe the best solutions come from teams that support one another, continuously learn, and embrace innovation."
+          )}
           center
         />
 
         <div className="mt-12 grid gap-6 md:grid-cols-3">
-          {[
-            {
-              title: "Continuous Learning",
-              description:
-                "Kesempatan mengembangkan pengetahuan dan keterampilan melalui pengalaman proyek serta pembelajaran berkelanjutan.",
-              icon: CheckCircle2,
-            },
-            {
-              title: "Collaborative Team",
-              description:
-                "Bekerja bersama tim lintas disiplin untuk menyelesaikan tantangan dan menciptakan solusi yang berdampak.",
-              icon: UsersRound,
-            },
-            {
-              title: "Meaningful Impact",
-              description:
-                "Berkontribusi dalam pengembangan teknologi dan layanan yang mendukung kemajuan fasilitas kesehatan.",
-              icon: BriefcaseBusiness,
-            },
-          ].map((item) => {
-            const Icon = item.icon;
+          {lifeItems.map(
+            (item) => {
+              const Icon =
+                item.icon;
 
-            return (
-              <article
-                key={item.title}
-                className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
-              >
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/10 text-orange">
-                  <Icon size={25} />
-                </div>
+              return (
+                <article
+                  key={
+                    item.title
+                  }
+                  className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange/30 hover:shadow-xl"
+                >
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange/10 text-orange">
+                    <Icon
+                      size={25}
+                    />
+                  </div>
 
-                <h3 className="mt-6 text-xl font-bold text-ink">
-                  {item.title}
-                </h3>
+                  <h3 className="mt-6 text-xl font-bold text-ink">
+                    {item.title}
+                  </h3>
 
-                <p className="mt-4 text-sm leading-7 text-slate-500">
-                  {item.description}
-                </p>
-              </article>
-            );
-          })}
+                  <p className="mt-4 text-sm leading-7 text-slate-500">
+                    {
+                      item.description
+                    }
+                  </p>
+                </article>
+              );
+            }
+          )}
         </div>
       </section>
 

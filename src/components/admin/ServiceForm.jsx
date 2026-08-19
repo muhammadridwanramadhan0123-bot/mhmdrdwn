@@ -2,11 +2,18 @@ import {
   useEffect,
   useState,
 } from "react";
+
 import {
   AlertTriangle,
+  Check,
+  FileText,
   ImagePlus,
   LoaderCircle,
   Save,
+  Search,
+  Settings2,
+  Sparkles,
+  UploadCloud,
   X,
 } from "lucide-react";
 
@@ -34,28 +41,40 @@ function createSlug(value) {
 }
 
 function formatDateTimeLocal(value) {
-  if (!value) return "";
+  if (!value) {
+    return "";
+  }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return "";
   }
 
   const timezoneOffset =
     date.getTimezoneOffset();
 
-  const localDate = new Date(
-    date.getTime() -
-      timezoneOffset * 60 * 1000
-  );
+  const localDate =
+    new Date(
+      date.getTime() -
+        timezoneOffset *
+          60 *
+          1000
+    );
 
   return localDate
     .toISOString()
     .slice(0, 16);
 }
 
-function createInitialValues(initialData) {
+function createInitialValues(
+  initialData
+) {
   return {
     name:
       initialData?.name || "",
@@ -64,7 +83,8 @@ function createInitialValues(initialData) {
       initialData?.slug || "",
 
     category_id:
-      initialData?.category_id || "",
+      initialData?.category_id ||
+      "",
 
     short_description:
       initialData?.short_description ||
@@ -78,13 +98,11 @@ function createInitialValues(initialData) {
       initialData?.icon || "",
 
     /*
-     * Data features lama tetap dipertahankan
-     * agar tidak terhapus ketika Service
-     * diperbarui.
+     * Tetap dipertahankan agar
+     * legacy services.features
+     * tidak terhapus ketika edit.
      *
-     * Field ini tidak lagi ditampilkan
-     * pada form karena detail fitur sekarang
-     * dikelola melalui service_features.
+     * Tidak lagi ditampilkan di UI.
      */
     features:
       normalizeServiceFeatures(
@@ -100,9 +118,10 @@ function createInitialValues(initialData) {
       initialData?.status ||
       "draft",
 
-    is_featured: Boolean(
-      initialData?.is_featured
-    ),
+    is_featured:
+      Boolean(
+        initialData?.is_featured
+      ),
 
     published_at:
       formatDateTimeLocal(
@@ -110,12 +129,30 @@ function createInitialValues(initialData) {
       ),
 
     seo_title:
-      initialData?.seo_title || "",
+      initialData?.seo_title ||
+      "",
 
     seo_description:
       initialData?.seo_description ||
       "",
   };
+}
+
+function FieldLabel({
+  children,
+  required = false,
+}) {
+  return (
+    <label className="mb-2 block text-sm font-semibold text-[#082B3A]">
+      {children}
+
+      {required && (
+        <span className="ml-1 text-red-500">
+          *
+        </span>
+      )}
+    </label>
+  );
 }
 
 export default function ServiceForm({
@@ -124,10 +161,14 @@ export default function ServiceForm({
   loading = false,
   submitLabel = "Simpan Service",
 }) {
-  const [values, setValues] =
-    useState(() =>
-      createInitialValues(initialData)
-    );
+  const [
+    values,
+    setValues,
+  ] = useState(() =>
+    createInitialValues(
+      initialData
+    )
+  );
 
   const [
     categories,
@@ -153,14 +194,17 @@ export default function ServiceForm({
     imagePreview,
     setImagePreview,
   ] = useState(
-    initialData?.image_url || ""
+    initialData?.image_url ||
+      ""
   );
 
   const [
     slugEdited,
     setSlugEdited,
   ] = useState(
-    Boolean(initialData?.slug)
+    Boolean(
+      initialData?.slug
+    )
   );
 
   const [
@@ -168,43 +212,53 @@ export default function ServiceForm({
     setFormError,
   ] = useState("");
 
+  /* ====================================================
+     CATEGORIES
+  ==================================================== */
+
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
     async function loadCategories() {
       try {
-        setLoadingCategories(true);
+        setLoadingCategories(
+          true
+        );
+
         setCategoryError("");
 
         const data =
-          await getServiceCategories({
-            includeInactive:
-              Boolean(initialData),
-          });
+          await getServiceCategories(
+            {
+              includeInactive:
+                Boolean(
+                  initialData
+                ),
+            }
+          );
 
-        if (!isMounted) {
+        if (!mounted) {
           return;
         }
 
-        setCategories(data);
-      } catch (error) {
-        if (!isMounted) {
-          return;
-        }
-
-        console.error(
-          "Kategori service gagal dimuat:",
-          error
+        setCategories(
+          data || []
         );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
 
         setCategoryError(
           error instanceof Error
             ? error.message
-            : "Kategori service gagal dimuat."
+            : "Kategori gagal dimuat."
         );
       } finally {
-        if (isMounted) {
-          setLoadingCategories(false);
+        if (mounted) {
+          setLoadingCategories(
+            false
+          );
         }
       }
     }
@@ -212,41 +266,59 @@ export default function ServiceForm({
     loadCategories();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, [initialData]);
 
+  /* ====================================================
+     RESET WHEN SERVICE CHANGES
+  ==================================================== */
+
   useEffect(() => {
     setValues(
-      createInitialValues(initialData)
+      createInitialValues(
+        initialData
+      )
     );
 
     setImageFile(null);
 
     setImagePreview(
-      initialData?.image_url || ""
+      initialData?.image_url ||
+        ""
     );
 
     setSlugEdited(
-      Boolean(initialData?.slug)
+      Boolean(
+        initialData?.slug
+      )
     );
 
     setFormError("");
   }, [initialData]);
 
+  /* ====================================================
+     IMAGE PREVIEW
+  ==================================================== */
+
   useEffect(() => {
     if (!imageFile) {
       setImagePreview(
-        initialData?.image_url || ""
+        initialData?.image_url ||
+          ""
       );
 
       return undefined;
     }
 
     const objectUrl =
-      URL.createObjectURL(imageFile);
+      URL.createObjectURL(
+        imageFile
+      );
 
-    setImagePreview(objectUrl);
+    setImagePreview(
+      objectUrl
+    );
 
     return () => {
       URL.revokeObjectURL(
@@ -258,6 +330,10 @@ export default function ServiceForm({
     initialData?.image_url,
   ]);
 
+  /* ====================================================
+     INPUT
+  ==================================================== */
+
   function handleChange(event) {
     const {
       name,
@@ -266,40 +342,59 @@ export default function ServiceForm({
       checked,
     } = event.target;
 
-    if (type === "checkbox") {
+    setFormError("");
+
+    if (
+      type === "checkbox"
+    ) {
       setValues(
-        (currentValues) => ({
-          ...currentValues,
-          [name]: checked,
+        (current) => ({
+          ...current,
+          [name]:
+            checked,
         })
       );
 
       return;
     }
 
-    if (name === "name") {
+    if (
+      name === "name"
+    ) {
       setValues(
-        (currentValues) => ({
-          ...currentValues,
+        (current) => ({
+          ...current,
 
-          name: value,
+          name:
+            value,
 
-          slug: slugEdited
-            ? currentValues.slug
-            : createSlug(value),
+          slug:
+            slugEdited
+              ? current.slug
+              : createSlug(
+                  value
+                ),
         })
       );
 
       return;
     }
 
-    if (name === "slug") {
-      setSlugEdited(true);
+    if (
+      name === "slug"
+    ) {
+      setSlugEdited(
+        true
+      );
 
       setValues(
-        (currentValues) => ({
-          ...currentValues,
-          slug: createSlug(value),
+        (current) => ({
+          ...current,
+
+          slug:
+            createSlug(
+              value
+            ),
         })
       );
 
@@ -307,24 +402,29 @@ export default function ServiceForm({
     }
 
     setValues(
-      (currentValues) => ({
-        ...currentValues,
-        [name]: value,
+      (current) => ({
+        ...current,
+
+        [name]:
+          value,
       })
     );
   }
+
+  /* ====================================================
+     IMAGE
+  ==================================================== */
 
   function handleImageChange(
     event
   ) {
     const selectedFile =
-      event.target.files?.[0] ||
-      null;
+      event.target.files?.[0];
 
-    setFormError("");
+    event.target.value =
+      "";
 
     if (!selectedFile) {
-      setImageFile(null);
       return;
     }
 
@@ -337,8 +437,6 @@ export default function ServiceForm({
         "Format gambar harus JPG, PNG, atau WebP."
       );
 
-      event.target.value = "";
-
       return;
     }
 
@@ -350,32 +448,30 @@ export default function ServiceForm({
         "Ukuran gambar maksimal 2 MB."
       );
 
-      event.target.value = "";
-
       return;
     }
 
-    setImageFile(selectedFile);
+    setImageFile(
+      selectedFile
+    );
   }
 
   function removeSelectedImage() {
     setImageFile(null);
 
     setImagePreview(
-      initialData?.image_url || ""
+      initialData?.image_url ||
+        ""
     );
-
-    const input =
-      document.getElementById(
-        "service-image"
-      );
-
-    if (input) {
-      input.value = "";
-    }
   }
 
-  async function handleSubmit(event) {
+  /* ====================================================
+     SUBMIT
+  ==================================================== */
+
+  async function handleSubmit(
+    event
+  ) {
     event.preventDefault();
 
     if (loading) {
@@ -384,25 +480,31 @@ export default function ServiceForm({
 
     setFormError("");
 
-    if (!values.name.trim()) {
+    if (
+      !values.name.trim()
+    ) {
       setFormError(
-        "Nama layanan wajib diisi."
+        "Nama Service wajib diisi."
       );
 
       return;
     }
 
-    if (!values.slug.trim()) {
+    if (
+      !values.slug.trim()
+    ) {
       setFormError(
-        "Slug layanan wajib diisi."
+        "Slug Service wajib diisi."
       );
 
       return;
     }
 
-    if (!values.category_id) {
+    if (
+      !values.category_id
+    ) {
       setFormError(
-        "Kategori layanan wajib dipilih."
+        "Kategori Service wajib dipilih."
       );
 
       return;
@@ -429,7 +531,8 @@ export default function ServiceForm({
     }
 
     if (
-      typeof onSubmit !== "function"
+      typeof onSubmit !==
+      "function"
     ) {
       setFormError(
         "Fungsi penyimpanan tidak tersedia."
@@ -446,27 +549,27 @@ export default function ServiceForm({
 
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={
+        handleSubmit
+      }
       className="space-y-6"
     >
+      {/* ERROR */}
+
       {(formError ||
         categoryError) && (
-        <div
-          role="alert"
-          className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4"
-        >
+        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
           <AlertTriangle
-            size={21}
+            size={20}
             className="mt-0.5 shrink-0 text-red-600"
           />
 
           <div>
-            <p className="font-semibold text-red-700">
-              Form belum dapat
-              disimpan
+            <p className="font-semibold text-red-800">
+              Form belum dapat disimpan
             </p>
 
-            <p className="mt-1 text-sm leading-6 text-red-600">
+            <p className="mt-1 text-sm text-red-700">
               {formError ||
                 categoryError}
             </p>
@@ -474,525 +577,529 @@ export default function ServiceForm({
         </div>
       )}
 
-      {/* Informasi utama */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-[#082B3A]">
-          Informasi Utama
-        </h2>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        {/* LEFT */}
 
-        <p className="mt-1 text-sm text-slate-500">
-          Masukkan nama, slug,
-          kategori, dan deskripsi
-          layanan.
-        </p>
+        <div className="space-y-6">
+          {/* INFORMATION */}
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label
-              htmlFor="service-name"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Nama Layanan{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <input
-              id="service-name"
-              name="name"
-              type="text"
-              value={values.name}
-              onChange={handleChange}
-              maxLength={180}
-              disabled={loading}
-              placeholder="Contoh: Hospital Information System"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-
-            <p className="mt-2 text-right text-xs text-slate-400">
-              {values.name.length}
-              /180
-            </p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="service-slug"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Slug{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <input
-              id="service-slug"
-              name="slug"
-              type="text"
-              value={values.slug}
-              onChange={handleChange}
-              maxLength={200}
-              disabled={loading}
-              placeholder="hospital-information-system"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-
-            <p className="mt-2 text-xs text-slate-400">
-              URL: /services/
-              {values.slug ||
-                "slug-layanan"}
-            </p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="service-category"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Kategori{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
-
-            <select
-              id="service-category"
-              name="category_id"
-              value={
-                values.category_id
-              }
-              onChange={handleChange}
-              disabled={
-                loading ||
-                loadingCategories
-              }
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            >
-              <option value="">
-                {loadingCategories
-                  ? "Memuat kategori..."
-                  : "Pilih kategori layanan"}
-              </option>
-
-              {categories.map(
-                (category) => (
-                  <option
-                    key={
-                      category.id
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-[#FF5A0A]">
+                  <FileText
+                    size={
+                      20
                     }
-                    value={
-                      category.id
-                    }
-                  >
-                    {category.name}
+                  />
+                </div>
 
-                    {!category.is_active
-                      ? " (Tidak aktif)"
-                      : ""}
+                <div>
+                  <h2 className="font-bold text-[#082B3A]">
+                    Informasi Service
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Nama, URL, kategori dan deskripsi.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-6">
+              <div>
+                <FieldLabel
+                  required
+                >
+                  Nama Service
+                </FieldLabel>
+
+                <input
+                  name="name"
+                  value={
+                    values.name
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  maxLength={
+                    180
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100"
+                />
+              </div>
+
+              <div>
+                <FieldLabel
+                  required
+                >
+                  Slug
+                </FieldLabel>
+
+                <input
+                  name="slug"
+                  value={
+                    values.slug
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A]"
+                />
+
+                <p className="mt-2 text-xs text-slate-400">
+                  /services/
+                  {values.slug ||
+                    "slug-service"}
+                </p>
+              </div>
+
+              <div>
+                <FieldLabel
+                  required
+                >
+                  Kategori
+                </FieldLabel>
+
+                <select
+                  name="category_id"
+                  value={
+                    values.category_id
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading ||
+                    loadingCategories
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
+                >
+                  <option value="">
+                    {loadingCategories
+                      ? "Memuat kategori..."
+                      : "Pilih kategori"}
                   </option>
-                )
-              )}
-            </select>
-          </div>
 
-          <div className="md:col-span-2">
-            <label
-              htmlFor="service-short-description"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Deskripsi Singkat{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
+                  {categories.map(
+                    (
+                      category
+                    ) => (
+                      <option
+                        key={
+                          category.id
+                        }
+                        value={
+                          category.id
+                        }
+                      >
+                        {
+                          category.name
+                        }
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
 
-            <textarea
-              id="service-short-description"
-              name="short_description"
-              value={
-                values.short_description
-              }
-              onChange={handleChange}
-              maxLength={300}
-              rows={4}
-              disabled={loading}
-              placeholder="Tuliskan ringkasan singkat layanan..."
-              className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
+              <div>
+                <FieldLabel
+                  required
+                >
+                  Deskripsi Singkat
+                </FieldLabel>
 
-            <p className="mt-2 text-right text-xs text-slate-400">
-              {
-                values
-                  .short_description
-                  .length
-              }
-              /300
-            </p>
-          </div>
+                <textarea
+                  name="short_description"
+                  value={
+                    values.short_description
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  rows={4}
+                  maxLength={
+                    300
+                  }
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none focus:border-[#FF5A0A]"
+                />
 
-          <div className="md:col-span-2">
-            <label
-              htmlFor="service-full-description"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Deskripsi Lengkap{" "}
-              <span className="text-red-500">
-                *
-              </span>
-            </label>
+                <p className="mt-2 text-right text-xs text-slate-400">
+                  {
+                    values.short_description
+                      .length
+                  }
+                  /300
+                </p>
+              </div>
 
-            <textarea
-              id="service-full-description"
-              name="full_description"
-              value={
-                values.full_description
-              }
-              onChange={handleChange}
-              rows={10}
-              disabled={loading}
-              placeholder="Tuliskan penjelasan lengkap mengenai layanan..."
-              className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-          </div>
+              <div>
+                <FieldLabel
+                  required
+                >
+                  Deskripsi Lengkap
+                </FieldLabel>
+
+                <textarea
+                  name="full_description"
+                  value={
+                    values.full_description
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  rows={10}
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none focus:border-[#FF5A0A]"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* SEO */}
+
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Search
+                    size={
+                      19
+                    }
+                  />
+                </div>
+
+                <div>
+                  <h2 className="font-bold text-[#082B3A]">
+                    SEO
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Judul dan deskripsi untuk mesin pencari.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-6">
+              <div>
+                <FieldLabel>
+                  SEO Title
+                </FieldLabel>
+
+                <input
+                  name="seo_title"
+                  value={
+                    values.seo_title
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  maxLength={
+                    70
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#FF5A0A]"
+                />
+
+                <p className="mt-2 text-right text-xs text-slate-400">
+                  {
+                    values.seo_title
+                      .length
+                  }
+                  /70
+                </p>
+              </div>
+
+              <div>
+                <FieldLabel>
+                  SEO Description
+                </FieldLabel>
+
+                <textarea
+                  name="seo_description"
+                  value={
+                    values.seo_description
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  disabled={
+                    loading
+                  }
+                  rows={4}
+                  maxLength={
+                    170
+                  }
+                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none focus:border-[#FF5A0A]"
+                />
+
+                <p className="mt-2 text-right text-xs text-slate-400">
+                  {
+                    values.seo_description
+                      .length
+                  }
+                  /170
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
 
-      {/* Tampilan layanan */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-[#082B3A]">
-          Tampilan Layanan
-        </h2>
+        {/* RIGHT */}
 
-        <p className="mt-1 text-sm text-slate-500">
-          Atur icon dan urutan
-          tampilan layanan pada
-          halaman publik.
-        </p>
+        <aside className="space-y-6">
+          {/* PUBLISH */}
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div>
-            <label
-              htmlFor="service-icon"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Nama Icon
-            </label>
-
-            <input
-              id="service-icon"
-              name="icon"
-              type="text"
-              value={values.icon}
-              onChange={handleChange}
-              disabled={loading}
-              placeholder="Contoh: Stethoscope"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-
-            <p className="mt-2 text-xs leading-5 text-slate-400">
-              Gunakan nama icon yang
-              didukung oleh tampilan
-              website.
-            </p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="service-display-order"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Urutan Tampil
-            </label>
-
-            <input
-              id="service-display-order"
-              name="display_order"
-              type="number"
-              min="0"
-              step="1"
-              value={
-                values.display_order
-              }
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-
-            <p className="mt-2 text-xs text-slate-400">
-              Angka terkecil tampil
-              lebih awal.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Gambar */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-[#082B3A]">
-          Gambar Layanan
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Gunakan JPG, PNG, atau
-          WebP, maksimal 2 MB.
-        </p>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div>
-            <label
-              htmlFor="service-image"
-              className="flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center transition hover:border-[#FF5A0A] hover:bg-orange-50"
-            >
-              <ImagePlus
-                size={38}
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Settings2
+                size={20}
                 className="text-[#FF5A0A]"
               />
 
-              <span className="mt-4 text-sm font-semibold text-[#082B3A]">
-                Pilih gambar layanan
-              </span>
+              <h2 className="font-bold text-[#082B3A]">
+                Pengaturan
+              </h2>
+            </div>
 
-              <span className="mt-2 text-xs text-slate-500">
-                Rekomendasi rasio
-                16:9
-              </span>
-            </label>
+            <div className="mt-5 space-y-5">
+              <div>
+                <FieldLabel>
+                  Status
+                </FieldLabel>
 
-            <input
-              id="service-image"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={
-                handleImageChange
-              }
-              disabled={loading}
-              className="sr-only"
-            />
+                <select
+                  name="status"
+                  value={
+                    values.status
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none"
+                >
+                  <option value="draft">
+                    Draft
+                  </option>
 
-            {imageFile && (
-              <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#082B3A]">
-                    {imageFile.name}
+                  <option value="published">
+                    Published
+                  </option>
+
+                  <option value="archived">
+                    Archived
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <FieldLabel>
+                  Urutan Tampil
+                </FieldLabel>
+
+                <input
+                  name="display_order"
+                  type="number"
+                  min="0"
+                  value={
+                    values.display_order
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>
+                  Icon
+                </FieldLabel>
+
+                <input
+                  name="icon"
+                  value={
+                    values.icon
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  placeholder="Stethoscope"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none"
+                />
+              </div>
+
+              <div>
+                <FieldLabel>
+                  Tanggal Publish
+                </FieldLabel>
+
+                <input
+                  name="published_at"
+                  type="datetime-local"
+                  value={
+                    values.published_at
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none"
+                />
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4">
+                <input
+                  name="is_featured"
+                  type="checkbox"
+                  checked={
+                    values.is_featured
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#FF5A0A]"
+                />
+
+                <div>
+                  <p className="text-sm font-semibold text-[#082B3A]">
+                    Featured Service
                   </p>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    {(
-                      imageFile.size /
-                      1024 /
-                      1024
-                    ).toFixed(2)}{" "}
-                    MB
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Tandai sebagai layanan unggulan.
                   </p>
                 </div>
+              </label>
+            </div>
+          </section>
 
-                <button
-                  type="button"
-                  onClick={
-                    removeSelectedImage
-                  }
-                  disabled={loading}
-                  className="ml-4 rounded-lg p-2 text-red-500 transition hover:bg-red-50"
-                  aria-label="Hapus gambar pilihan"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            )}
-          </div>
+          {/* IMAGE */}
 
-          <div>
-            <p className="mb-2 text-sm font-semibold text-[#082B3A]">
-              Preview Gambar
-            </p>
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <ImagePlus
+                size={20}
+                className="text-[#FF5A0A]"
+              />
 
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+              <h2 className="font-bold text-[#082B3A]">
+                Gambar Service
+              </h2>
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
               {imagePreview ? (
                 <img
-                  src={imagePreview}
-                  alt="Preview layanan"
+                  src={
+                    imagePreview
+                  }
+                  alt="Preview Service"
                   className="aspect-video w-full object-cover"
                 />
               ) : (
                 <div className="flex aspect-video items-center justify-center">
-                  <div className="text-center text-slate-400">
-                    <ImagePlus
-                      size={30}
-                      className="mx-auto"
-                    />
-
-                    <p className="mt-2 text-xs">
-                      Belum ada gambar
-                    </p>
-                  </div>
+                  <ImagePlus
+                    size={36}
+                    className="text-slate-300"
+                  />
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* Publikasi dan SEO */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-[#082B3A]">
-          Publikasi dan SEO
-        </h2>
+            <label className="mt-4 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#082B3A] px-4 py-3 text-sm font-semibold text-white">
+              <UploadCloud
+                size={17}
+              />
+              Pilih Gambar
 
-        <div className="mt-6 grid gap-5 md:grid-cols-2">
-          <div>
-            <label
-              htmlFor="service-status"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Status
-            </label>
-
-            <select
-              id="service-status"
-              name="status"
-              value={values.status}
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            >
-              <option value="draft">
-                Draft
-              </option>
-
-              <option value="published">
-                Published
-              </option>
-
-              <option value="archived">
-                Archived
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="service-published-at"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              Tanggal Publikasi
-            </label>
-
-            <input
-              id="service-published-at"
-              name="published_at"
-              type="datetime-local"
-              value={
-                values.published_at
-              }
-              onChange={handleChange}
-              disabled={loading}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
               <input
-                name="is_featured"
-                type="checkbox"
-                checked={
-                  values.is_featured
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={
+                  handleImageChange
                 }
-                onChange={handleChange}
-                disabled={loading}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#FF5A0A] focus:ring-[#FF5A0A]"
+                className="hidden"
+              />
+            </label>
+
+            {imageFile && (
+              <button
+                type="button"
+                onClick={
+                  removeSelectedImage
+                }
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600"
+              >
+                <X size={16} />
+                Batalkan Gambar Baru
+              </button>
+            )}
+
+            <p className="mt-3 text-xs leading-5 text-slate-400">
+              JPG, PNG atau WebP. Maksimal 2 MB.
+            </p>
+          </section>
+
+          {/* FEATURE INFO */}
+
+          {initialData && (
+            <section className="rounded-3xl border border-orange-100 bg-orange-50/60 p-5">
+              <Sparkles
+                size={20}
+                className="text-[#FF5A0A]"
               />
 
-              <span>
-                <span className="block text-sm font-semibold text-[#082B3A]">
-                  Featured Service
-                </span>
+              <p className="mt-3 text-sm font-bold text-[#082B3A]">
+                Fitur dikelola terpisah
+              </p>
 
-                <span className="mt-1 block text-xs leading-5 text-slate-500">
-                  Tampilkan layanan ini
-                  sebagai layanan unggulan
-                  di homepage.
-                </span>
-              </span>
-            </label>
-          </div>
+              <p className="mt-1 text-xs leading-6 text-slate-600">
+                Gunakan tab{" "}
+                <strong>
+                  Fitur & Cakupan
+                </strong>{" "}
+                pada halaman Edit Service. Daftar fitur lama tidak lagi
+                ditampilkan di form utama.
+              </p>
+            </section>
+          )}
+        </aside>
+      </div>
 
-          <div>
-            <label
-              htmlFor="service-seo-title"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              SEO Title
-            </label>
+      {/* STICKY ACTION */}
 
-            <input
-              id="service-seo-title"
-              name="seo_title"
-              type="text"
-              value={
-                values.seo_title
-              }
-              onChange={handleChange}
-              maxLength={180}
-              disabled={loading}
-              placeholder="Judul untuk mesin pencari"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="service-seo-description"
-              className="mb-2 block text-sm font-semibold text-[#082B3A]"
-            >
-              SEO Description
-            </label>
-
-            <textarea
-              id="service-seo-description"
-              name="seo_description"
-              value={
-                values.seo_description
-              }
-              onChange={handleChange}
-              maxLength={300}
-              rows={4}
-              disabled={loading}
-              placeholder="Deskripsi untuk mesin pencari"
-              className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-7 outline-none transition focus:border-[#FF5A0A] focus:ring-2 focus:ring-orange-100 disabled:bg-slate-100"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Tombol simpan */}
-      <div className="flex justify-end rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="sticky bottom-4 z-20 flex justify-end rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl shadow-slate-900/5 backdrop-blur">
         <button
           type="submit"
-          disabled={
-            loading ||
-            loadingCategories
-          }
-          className="inline-flex min-w-48 items-center justify-center gap-2 rounded-xl bg-[#FF5A0A] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#E94F00] disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#FF5A0A] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#E94F00] disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {loading ? (
-            <>
-              <LoaderCircle
-                size={18}
-                className="animate-spin"
-              />
-
-              Menyimpan...
-            </>
+            <LoaderCircle
+              size={18}
+              className="animate-spin"
+            />
           ) : (
-            <>
-              <Save size={18} />
-
-              {submitLabel}
-            </>
+            <Save size={18} />
           )}
+
+          {loading
+            ? "Menyimpan..."
+            : submitLabel}
         </button>
       </div>
     </form>

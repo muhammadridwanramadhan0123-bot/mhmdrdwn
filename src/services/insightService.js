@@ -1,6 +1,9 @@
 import { supabase } from "../lib/supabase";
 
 const INSIGHT_TABLE = "insights";
+const INSIGHT_TRANSLATION_TABLE =
+  "insight_translations";
+
 const INSIGHT_BUCKET = "insight-images";
 
 const MAX_COVER_SIZE = 2 * 1024 * 1024;
@@ -10,6 +13,162 @@ const ALLOWED_IMAGE_TYPES = [
   "image/png",
   "image/webp",
 ];
+
+/*
+ * ======================================================
+ * LANGUAGE HELPERS
+ * ======================================================
+ */
+
+/**
+ * Locale publik yang didukung.
+ *
+ * Saat ini:
+ * - id
+ * - en
+ *
+ * Locale tidak dikenal akan fallback ke ID.
+ */
+function normalizePublicLocale(locale = "id") {
+  return locale === "en" ? "en" : "id";
+}
+
+/**
+ * Mengambil nilai translation.
+ *
+ * Jika translation:
+ * - null
+ * - undefined
+ * - string kosong
+ *
+ * maka fallback ke Bahasa Indonesia.
+ */
+function getTranslatedText(
+  translatedValue,
+  baseValue
+) {
+  if (
+    translatedValue === null ||
+    translatedValue === undefined
+  ) {
+    return baseValue ?? null;
+  }
+
+  if (
+    typeof translatedValue === "string"
+  ) {
+    const normalizedValue =
+      translatedValue.trim();
+
+    if (!normalizedValue) {
+      return baseValue ?? null;
+    }
+
+    return translatedValue;
+  }
+
+  return translatedValue;
+}
+
+/**
+ * Menggabungkan data base Insight
+ * dengan translation.
+ *
+ * Yang diterjemahkan:
+ * - title
+ * - excerpt
+ * - content
+ * - seo_title
+ * - seo_description
+ *
+ * Yang tetap berasal dari insights:
+ * - id
+ * - slug
+ * - type
+ * - category
+ * - cover_image_url
+ * - image_url
+ * - author
+ * - author_name
+ * - published_at
+ * - is_featured
+ * - status
+ * - timestamps
+ */
+function mergeInsightTranslation(
+  insight,
+  translation,
+  locale = "id"
+) {
+  if (!insight) {
+    return null;
+  }
+
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  /*
+   * Bahasa Indonesia menggunakan
+   * tabel insights langsung.
+   */
+  if (normalizedLocale === "id") {
+    return {
+      ...insight,
+
+      locale: "id",
+
+      translation_locale: "id",
+
+      has_translation: false,
+    };
+  }
+
+  /*
+   * English + fallback per field.
+   */
+  return {
+    ...insight,
+
+    title: getTranslatedText(
+      translation?.title,
+      insight.title
+    ),
+
+    excerpt: getTranslatedText(
+      translation?.excerpt,
+      insight.excerpt
+    ),
+
+    content: getTranslatedText(
+      translation?.content,
+      insight.content
+    ),
+
+    seo_title: getTranslatedText(
+      translation?.seo_title,
+      insight.seo_title
+    ),
+
+    seo_description: getTranslatedText(
+      translation?.seo_description,
+      insight.seo_description
+    ),
+
+    locale: normalizedLocale,
+
+    translation_locale: translation
+      ? normalizedLocale
+      : "id",
+
+    has_translation: Boolean(translation),
+  };
+}
+
+/*
+ * ======================================================
+ * GENERAL HELPERS
+ * ======================================================
+ */
 
 function createUniqueId() {
   if (
@@ -49,7 +208,8 @@ function validateCoverImage(file) {
 }
 
 function createCoverPath(file) {
-  const safeFileName = sanitizeFileName(file.name);
+  const safeFileName =
+    sanitizeFileName(file.name);
 
   return `covers/${Date.now()}-${createUniqueId()}-${safeFileName}`;
 }
@@ -57,15 +217,20 @@ function createCoverPath(file) {
 function getStoragePathFromPublicUrl(publicUrl) {
   if (!publicUrl) return "";
 
-  const marker = `/storage/v1/object/public/${INSIGHT_BUCKET}/`;
-  const markerIndex = publicUrl.indexOf(marker);
+  const marker =
+    `/storage/v1/object/public/${INSIGHT_BUCKET}/`;
+
+  const markerIndex =
+    publicUrl.indexOf(marker);
 
   if (markerIndex === -1) {
     return "";
   }
 
   return decodeURIComponent(
-    publicUrl.slice(markerIndex + marker.length)
+    publicUrl.slice(
+      markerIndex + marker.length
+    )
   );
 }
 
@@ -97,28 +262,40 @@ function createInsightPayload(
   );
 
   /*
-   * Apabila langsung dipublikasikan tetapi tanggal
-   * belum diisi, gunakan tanggal saat ini.
+   * Apabila langsung dipublikasikan
+   * tetapi tanggal belum diisi,
+   * gunakan tanggal saat ini.
    */
   if (
     normalizedStatus === "published" &&
     !publishedAt
   ) {
-    publishedAt = new Date().toISOString();
+    publishedAt =
+      new Date().toISOString();
   }
 
   const payload = {
-    title: String(values.title || "").trim(),
+    title: String(
+      values.title || ""
+    ).trim(),
 
-    slug: String(values.slug || "")
+    slug: String(
+      values.slug || ""
+    )
       .trim()
       .toLowerCase(),
 
-    excerpt: String(values.excerpt || "").trim(),
+    excerpt: String(
+      values.excerpt || ""
+    ).trim(),
 
-    content: String(values.content || "").trim(),
+    content: String(
+      values.content || ""
+    ).trim(),
 
-    category: String(values.category || "").trim(),
+    category: String(
+      values.category || ""
+    ).trim(),
 
     author_name: String(
       values.author_name || ""
@@ -128,7 +305,9 @@ function createInsightPayload(
 
     status: normalizedStatus,
 
-    is_featured: Boolean(values.is_featured),
+    is_featured: Boolean(
+      values.is_featured
+    ),
   };
 
   if (includeCover) {
@@ -139,8 +318,14 @@ function createInsightPayload(
   return payload;
 }
 
-function throwInsightError(error, fallbackMessage) {
-  console.error(fallbackMessage, error);
+function throwInsightError(
+  error,
+  fallbackMessage
+) {
+  console.error(
+    fallbackMessage,
+    error
+  );
 
   if (error?.code === "23505") {
     throw new Error(
@@ -158,19 +343,160 @@ function throwInsightError(error, fallbackMessage) {
     error?.message || ""
   ).toLowerCase();
 
-  if (errorMessage.includes("row-level security")) {
+  if (
+    errorMessage.includes(
+      "row-level security"
+    )
+  ) {
     throw new Error(
       "Tindakan ditolak oleh policy RLS Supabase."
     );
   }
 
   throw new Error(
-    error?.message || fallbackMessage
+    error?.message ||
+      fallbackMessage
   );
 }
 
 /*
- * Mengunggah cover insight ke Supabase Storage.
+ * ======================================================
+ * TRANSLATION HELPERS
+ * ======================================================
+ */
+
+/**
+ * Mengambil translation published
+ * untuk sekumpulan Insight.
+ *
+ * Error translation tidak boleh
+ * membuat halaman publik gagal.
+ */
+async function getPublishedInsightTranslationsByIds(
+  insightIds,
+  locale = "id"
+) {
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  if (
+    normalizedLocale === "id" ||
+    !Array.isArray(insightIds) ||
+    insightIds.length === 0
+  ) {
+    return [];
+  }
+
+  const { data, error } =
+    await supabase
+      .from(
+        INSIGHT_TRANSLATION_TABLE
+      )
+      .select(`
+        id,
+        insight_id,
+        locale,
+        title,
+        excerpt,
+        content,
+        seo_title,
+        seo_description,
+        status
+      `)
+      .in(
+        "insight_id",
+        insightIds
+      )
+      .eq(
+        "locale",
+        normalizedLocale
+      )
+      .eq(
+        "status",
+        "published"
+      );
+
+  if (error) {
+    console.warn(
+      `Translation Insight locale "${normalizedLocale}" gagal dimuat. Fallback ke Bahasa Indonesia:`,
+      error
+    );
+
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Mengambil satu translation
+ * Insight berdasarkan insight_id.
+ */
+async function getPublishedInsightTranslationById(
+  insightId,
+  locale = "id"
+) {
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  if (
+    normalizedLocale === "id" ||
+    !insightId
+  ) {
+    return null;
+  }
+
+  const { data, error } =
+    await supabase
+      .from(
+        INSIGHT_TRANSLATION_TABLE
+      )
+      .select(`
+        id,
+        insight_id,
+        locale,
+        title,
+        excerpt,
+        content,
+        seo_title,
+        seo_description,
+        status
+      `)
+      .eq(
+        "insight_id",
+        insightId
+      )
+      .eq(
+        "locale",
+        normalizedLocale
+      )
+      .eq(
+        "status",
+        "published"
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.warn(
+      `Translation detail Insight locale "${normalizedLocale}" gagal dimuat. Fallback ke Bahasa Indonesia:`,
+      error
+    );
+
+    return null;
+  }
+
+  return data || null;
+}
+
+/*
+ * ======================================================
+ * STORAGE
+ * ======================================================
+ */
+
+/*
+ * Mengunggah cover insight
+ * ke Supabase Storage.
  */
 export async function uploadInsightCover(file) {
   validateCoverImage(file);
@@ -181,16 +507,21 @@ export async function uploadInsightCover(file) {
     );
   }
 
-  const filePath = createCoverPath(file);
+  const filePath =
+    createCoverPath(file);
 
   const { error: uploadError } =
     await supabase.storage
       .from(INSIGHT_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type,
-      });
+      .upload(
+        filePath,
+        file,
+        {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type,
+        }
+      );
 
   if (uploadError) {
     throwInsightError(
@@ -209,7 +540,8 @@ export async function uploadInsightCover(file) {
 
   if (!publicUrl) {
     /*
-     * Bersihkan file apabila public URL tidak terbentuk.
+     * Bersihkan file apabila
+     * public URL tidak terbentuk.
      */
     await supabase.storage
       .from(INSIGHT_BUCKET)
@@ -227,7 +559,8 @@ export async function uploadInsightCover(file) {
 }
 
 /*
- * Menghapus cover dari Supabase Storage.
+ * Menghapus cover dari
+ * Supabase Storage.
  *
  * Parameter dapat berupa:
  * - path file
@@ -240,19 +573,23 @@ export async function deleteInsightCover(
     return true;
   }
 
-  const filePath = String(pathOrUrl).startsWith(
-    "http"
-  )
-    ? getStoragePathFromPublicUrl(pathOrUrl)
-    : pathOrUrl;
+  const filePath =
+    String(pathOrUrl).startsWith(
+      "http"
+    )
+      ? getStoragePathFromPublicUrl(
+          pathOrUrl
+        )
+      : pathOrUrl;
 
   if (!filePath) {
     return false;
   }
 
-  const { error } = await supabase.storage
-    .from(INSIGHT_BUCKET)
-    .remove([filePath]);
+  const { error } =
+    await supabase.storage
+      .from(INSIGHT_BUCKET)
+      .remove([filePath]);
 
   if (error) {
     throwInsightError(
@@ -265,15 +602,29 @@ export async function deleteInsightCover(
 }
 
 /*
- * Mengambil semua insight untuk halaman admin.
+ * ======================================================
+ * ADMIN READ
+ * ======================================================
+ */
+
+/*
+ * Mengambil semua insight
+ * untuk halaman admin.
+ *
+ * Admin existing tetap memakai
+ * source of truth Bahasa Indonesia.
  */
 export async function getAdminInsights() {
-  const { data, error } = await supabase
-    .from(INSIGHT_TABLE)
-    .select("*")
-    .order("created_at", {
-      ascending: false,
-    });
+  const { data, error } =
+    await supabase
+      .from(INSIGHT_TABLE)
+      .select("*")
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      );
 
   if (error) {
     throwInsightError(
@@ -286,60 +637,271 @@ export async function getAdminInsights() {
 }
 
 /*
- * Mengambil insight published untuk halaman publik.
+ * ======================================================
+ * PUBLIC LIST
+ * ======================================================
  */
-export async function getPublishedInsights() {
-  const { data, error } = await supabase
+
+/**
+ * Mengambil Insight published
+ * untuk halaman publik.
+ *
+ * Pemakaian:
+ *
+ * getPublishedInsights()
+ * → ID
+ *
+ * getPublishedInsights("id")
+ * → ID
+ *
+ * getPublishedInsights("en")
+ * → EN + fallback ID
+ */
+export async function getPublishedInsights(
+  locale = "id"
+) {
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  /*
+   * ====================================================
+   * 1. BASE INSIGHTS
+   * ====================================================
+   */
+
+  const {
+    data: baseInsights,
+    error: baseError,
+  } = await supabase
     .from(INSIGHT_TABLE)
     .select("*")
-    .eq("status", "published")
-    .order("published_at", {
-      ascending: false,
-    });
+    .eq(
+      "status",
+      "published"
+    )
+    .order(
+      "published_at",
+      {
+        ascending: false,
+      }
+    );
 
-  if (error) {
+  if (baseError) {
     throwInsightError(
-      error,
+      baseError,
       "Insight publik gagal dimuat."
     );
   }
 
-  return data || [];
+  const insights =
+    Array.isArray(baseInsights)
+      ? baseInsights
+      : [];
+
+  /*
+   * Bahasa Indonesia langsung
+   * menggunakan base.
+   */
+  if (
+    normalizedLocale === "id" ||
+    insights.length === 0
+  ) {
+    return insights.map(
+      (insight) =>
+        mergeInsightTranslation(
+          insight,
+          null,
+          "id"
+        )
+    );
+  }
+
+  /*
+   * ====================================================
+   * 2. TRANSLATIONS
+   * ====================================================
+   */
+
+  const insightIds =
+    insights.map(
+      (insight) => insight.id
+    );
+
+  const translations =
+    await getPublishedInsightTranslationsByIds(
+      insightIds,
+      normalizedLocale
+    );
+
+  const translationMap =
+    new Map(
+      translations.map(
+        (translation) => [
+          translation.insight_id,
+          translation,
+        ]
+      )
+    );
+
+  /*
+   * ====================================================
+   * 3. MERGE
+   * ====================================================
+   */
+
+  return insights.map(
+    (insight) =>
+      mergeInsightTranslation(
+        insight,
+        translationMap.get(
+          insight.id
+        ) || null,
+        normalizedLocale
+      )
+  );
 }
 
 /*
- * Mengambil insight featured untuk homepage.
+ * ======================================================
+ * FEATURED INSIGHTS
+ * ======================================================
+ */
+
+/**
+ * Mengambil Insight featured
+ * untuk homepage.
+ *
+ * Signature lama tetap aman:
+ *
+ * getFeaturedInsights()
+ * getFeaturedInsights(3)
+ *
+ * Sekarang juga mendukung:
+ *
+ * getFeaturedInsights(3, "en")
+ *
+ * Parameter locale dibuat sebagai
+ * argumen kedua agar penggunaan
+ * existing getFeaturedInsights(3)
+ * tidak rusak.
  */
 export async function getFeaturedInsights(
-  limit = 3
+  limit = 3,
+  locale = "id"
 ) {
   const safeLimit =
-    Number.isInteger(limit) && limit > 0
+    Number.isInteger(limit) &&
+    limit > 0
       ? limit
       : 3;
 
-  const { data, error } = await supabase
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  /*
+   * ====================================================
+   * 1. BASE FEATURED
+   * ====================================================
+   */
+
+  const {
+    data: baseInsights,
+    error: baseError,
+  } = await supabase
     .from(INSIGHT_TABLE)
     .select("*")
-    .eq("status", "published")
-    .eq("is_featured", true)
-    .order("published_at", {
-      ascending: false,
-    })
+    .eq(
+      "status",
+      "published"
+    )
+    .eq(
+      "is_featured",
+      true
+    )
+    .order(
+      "published_at",
+      {
+        ascending: false,
+      }
+    )
     .limit(safeLimit);
 
-  if (error) {
+  if (baseError) {
     throwInsightError(
-      error,
+      baseError,
       "Featured insight gagal dimuat."
     );
   }
 
-  return data || [];
+  const insights =
+    Array.isArray(baseInsights)
+      ? baseInsights
+      : [];
+
+  if (
+    normalizedLocale === "id" ||
+    insights.length === 0
+  ) {
+    return insights.map(
+      (insight) =>
+        mergeInsightTranslation(
+          insight,
+          null,
+          "id"
+        )
+    );
+  }
+
+  /*
+   * ====================================================
+   * 2. TRANSLATIONS
+   * ====================================================
+   */
+
+  const insightIds =
+    insights.map(
+      (insight) => insight.id
+    );
+
+  const translations =
+    await getPublishedInsightTranslationsByIds(
+      insightIds,
+      normalizedLocale
+    );
+
+  const translationMap =
+    new Map(
+      translations.map(
+        (translation) => [
+          translation.insight_id,
+          translation,
+        ]
+      )
+    );
+
+  return insights.map(
+    (insight) =>
+      mergeInsightTranslation(
+        insight,
+        translationMap.get(
+          insight.id
+        ) || null,
+        normalizedLocale
+      )
+  );
 }
 
 /*
- * Mengambil satu insight untuk halaman edit admin.
+ * ======================================================
+ * ADMIN DETAIL BY ID
+ * ======================================================
+ */
+
+/*
+ * Mengambil satu insight untuk
+ * halaman edit admin.
+ *
+ * Tetap memakai base ID.
  */
 export async function getInsightById(id) {
   if (!id) {
@@ -348,11 +910,15 @@ export async function getInsightById(id) {
     );
   }
 
-  const { data, error } = await supabase
-    .from(INSIGHT_TABLE)
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } =
+    await supabase
+      .from(INSIGHT_TABLE)
+      .select("*")
+      .eq(
+        "id",
+        id
+      )
+      .maybeSingle();
 
   if (error) {
     throwInsightError(
@@ -365,39 +931,138 @@ export async function getInsightById(id) {
 }
 
 /*
- * Mengambil detail insight publik berdasarkan slug.
+ * ======================================================
+ * PUBLIC DETAIL BY SLUG
+ * ======================================================
+ */
+
+/**
+ * Mengambil detail Insight publik
+ * berdasarkan slug.
+ *
+ * Pemakaian:
+ *
+ * getPublishedInsightBySlug(slug)
+ * → ID
+ *
+ * getPublishedInsightBySlug(
+ *   slug,
+ *   "id"
+ * )
+ * → ID
+ *
+ * getPublishedInsightBySlug(
+ *   slug,
+ *   "en"
+ * )
+ * → English + fallback ID
  */
 export async function getPublishedInsightBySlug(
-  slug
+  slug,
+  locale = "id"
 ) {
-  if (!slug) {
+  const normalizedSlug =
+    String(
+      slug || ""
+    ).trim();
+
+  const normalizedLocale =
+    normalizePublicLocale(locale);
+
+  if (!normalizedSlug) {
     throw new Error(
       "Slug insight tidak tersedia."
     );
   }
 
-  const { data, error } = await supabase
+  /*
+   * ====================================================
+   * 1. BASE INSIGHT
+   * ====================================================
+   */
+
+  const {
+    data: insight,
+    error: insightError,
+  } = await supabase
     .from(INSIGHT_TABLE)
     .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
+    .eq(
+      "slug",
+      normalizedSlug
+    )
+    .eq(
+      "status",
+      "published"
+    )
     .maybeSingle();
 
-  if (error) {
+  if (insightError) {
     throwInsightError(
-      error,
+      insightError,
       "Detail insight gagal dimuat."
     );
   }
 
-  return data;
+  /*
+   * Insight tidak ditemukan
+   * bukan query error.
+   */
+  if (!insight) {
+    return null;
+  }
+
+  /*
+   * ID langsung base.
+   */
+  if (
+    normalizedLocale === "id"
+  ) {
+    return mergeInsightTranslation(
+      insight,
+      null,
+      "id"
+    );
+  }
+
+  /*
+   * ====================================================
+   * 2. TRANSLATION
+   * ====================================================
+   */
+
+  const translation =
+    await getPublishedInsightTranslationById(
+      insight.id,
+      normalizedLocale
+    );
+
+  /*
+   * ====================================================
+   * 3. MERGE + FALLBACK
+   * ====================================================
+   */
+
+  return mergeInsightTranslation(
+    insight,
+    translation,
+    normalizedLocale
+  );
 }
+
+/*
+ * ======================================================
+ * CREATE
+ * ======================================================
+ */
 
 /*
  * Membuat insight baru.
  *
  * values berisi data form.
- * coverFile berisi File dari input gambar.
+ * coverFile berisi File input gambar.
+ *
+ * Source of truth tetap tabel insights.
  */
 export async function createInsight(
   values,
@@ -408,20 +1073,25 @@ export async function createInsight(
   try {
     if (coverFile) {
       uploadedCover =
-        await uploadInsightCover(coverFile);
+        await uploadInsightCover(
+          coverFile
+        );
     }
 
-    const payload = createInsightPayload(
-      values,
-      uploadedCover?.publicUrl || null,
-      true
-    );
+    const payload =
+      createInsightPayload(
+        values,
+        uploadedCover?.publicUrl ||
+          null,
+        true
+      );
 
-    const { data, error } = await supabase
-      .from(INSIGHT_TABLE)
-      .insert(payload)
-      .select("*")
-      .single();
+    const { data, error } =
+      await supabase
+        .from(INSIGHT_TABLE)
+        .insert(payload)
+        .select("*")
+        .single();
 
     if (error) {
       throw error;
@@ -430,7 +1100,8 @@ export async function createInsight(
     return data;
   } catch (error) {
     /*
-     * Hapus gambar baru apabila insert database gagal.
+     * Hapus gambar baru apabila
+     * insert database gagal.
      */
     if (uploadedCover?.filePath) {
       try {
@@ -453,9 +1124,18 @@ export async function createInsight(
 }
 
 /*
+ * ======================================================
+ * UPDATE
+ * ======================================================
+ */
+
+/*
  * Memperbarui insight.
  *
- * Cover lama dipertahankan jika coverFile tidak diberikan.
+ * Cover lama dipertahankan jika
+ * coverFile tidak diberikan.
+ *
+ * Translation tidak disentuh.
  */
 export async function updateInsight(
   id,
@@ -482,24 +1162,33 @@ export async function updateInsight(
 
     if (coverFile) {
       uploadedCover =
-        await uploadInsightCover(coverFile);
+        await uploadInsightCover(
+          coverFile
+        );
     }
 
     const shouldReplaceCover =
-      Boolean(uploadedCover?.publicUrl);
+      Boolean(
+        uploadedCover?.publicUrl
+      );
 
-    const payload = createInsightPayload(
-      values,
-      uploadedCover?.publicUrl,
-      shouldReplaceCover
-    );
+    const payload =
+      createInsightPayload(
+        values,
+        uploadedCover?.publicUrl,
+        shouldReplaceCover
+      );
 
-    const { data, error } = await supabase
-      .from(INSIGHT_TABLE)
-      .update(payload)
-      .eq("id", id)
-      .select("*")
-      .maybeSingle();
+    const { data, error } =
+      await supabase
+        .from(INSIGHT_TABLE)
+        .update(payload)
+        .eq(
+          "id",
+          id
+        )
+        .select("*")
+        .maybeSingle();
 
     if (error) {
       throw error;
@@ -512,7 +1201,8 @@ export async function updateInsight(
     }
 
     /*
-     * Hapus cover lama setelah update database berhasil.
+     * Hapus cover lama setelah
+     * update database berhasil.
      */
     if (
       shouldReplaceCover &&
@@ -533,7 +1223,8 @@ export async function updateInsight(
     return data;
   } catch (error) {
     /*
-     * Hapus cover baru apabila update database gagal.
+     * Hapus cover baru apabila
+     * update database gagal.
      */
     if (uploadedCover?.filePath) {
       try {
@@ -556,7 +1247,17 @@ export async function updateInsight(
 }
 
 /*
- * Menghapus insight dan cover terkait.
+ * ======================================================
+ * DELETE
+ * ======================================================
+ */
+
+/*
+ * Menghapus insight dan
+ * cover terkait.
+ *
+ * insight_translations ikut terhapus
+ * melalui FK ON DELETE CASCADE.
  */
 export async function deleteInsight(id) {
   if (!id) {
@@ -566,7 +1267,8 @@ export async function deleteInsight(id) {
   }
 
   try {
-    const insight = await getInsightById(id);
+    const insight =
+      await getInsightById(id);
 
     if (!insight) {
       throw new Error(
@@ -574,12 +1276,16 @@ export async function deleteInsight(id) {
       );
     }
 
-    const { data, error } = await supabase
-      .from(INSIGHT_TABLE)
-      .delete()
-      .eq("id", id)
-      .select("id")
-      .maybeSingle();
+    const { data, error } =
+      await supabase
+        .from(INSIGHT_TABLE)
+        .delete()
+        .eq(
+          "id",
+          id
+        )
+        .select("id")
+        .maybeSingle();
 
     if (error) {
       throw error;
@@ -593,7 +1299,9 @@ export async function deleteInsight(id) {
 
     let coverDeleted = false;
 
-    if (insight.cover_image_url) {
+    if (
+      insight.cover_image_url
+    ) {
       try {
         coverDeleted =
           await deleteInsightCover(

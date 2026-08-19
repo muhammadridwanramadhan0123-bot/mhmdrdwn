@@ -6,12 +6,17 @@ import App from "./App";
 import "./index.css";
 
 import { AdminAuthProvider } from "./contexts/AdminAuthContext";
+import {
+  LanguageProvider,
+} from "./contexts/LanguageContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AdminAuthProvider>
-        <App />
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
       </AdminAuthProvider>
     </BrowserRouter>
   </StrictMode>
